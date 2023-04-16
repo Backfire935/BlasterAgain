@@ -19,16 +19,14 @@ class BLASTERAGAIN_API ABlasterCharacter : public ACharacter
 public:
 	ABlasterCharacter();
 
+	virtual void Tick(float DeltaTime) override;
+
+	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;//设置同步
-
-	UFUNCTION(Client,Reliable)
-	void ClientSetName(const FString& Name);
-
-	UFUNCTION(Server, Reliable)
-	void	ServerSetPlayerName(const FString& PlayerName);
+	virtual void PostInitializeComponents() override;
 
 
-
+#pragma region InputFunction
 protected:
 	virtual void BeginPlay() override;
 
@@ -68,11 +66,19 @@ protected:
 
 	//按V切换视角
 	void InputShiftView(const FInputActionValue& InputValue);
-	///
-public:	
-	virtual void Tick(float DeltaTime) override;
 
-	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+	//按V切换视角
+	void EquipButtonPressed(const FInputActionValue& InputValue);
+	///
+
+#pragma endregion InputFunction
+
+public:	
+	UFUNCTION(Client, Reliable)
+		void ClientSetName(const FString& Name);
+
+	UFUNCTION(Server, Reliable)
+		void	ServerSetPlayerName(const FString& PlayerName);
 
 	//RPC角色减速
 	UFUNCTION(Server, Reliable)
@@ -89,7 +95,16 @@ public:
 	UFUNCTION(Client, Reliable)
 		void ClientChangeView();
 
+	UFUNCTION()
 	void ChangeCameraView();
+
+	UFUNCTION(Server, Reliable)
+		void ServerEquipButtonPressed();
+
+	UFUNCTION(Server, Reliable)
+		void ServerDropButtonPressed();
+
+	
 protected:
 	//游戏内鼠标灵敏度
 	UPROPERTY(EditAnywhere, Category = "Input")
@@ -177,11 +192,19 @@ private:
 	//按下V切换视角
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "EnhancedInput | Action", meta = (AllowPrivateAccess = "true"))
 		TObjectPtr<UInputAction> IA_ChangeView;
+
+	//按下F拾取武器
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "EnhancedInput | Action", meta = (AllowPrivateAccess = "true"))
+		TObjectPtr<UInputAction> IA_Equip;
 	///
 #pragma endregion EnhancedInput
 
 	UFUNCTION()
 	void OnRep_OverlappingWeapon(AWeapon *LastWeapon);
+
+	UPROPERTY(VisibleAnywhere)
+		class UCombatComponent* Combat;
+
 
 
 public:

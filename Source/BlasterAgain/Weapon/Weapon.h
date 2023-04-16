@@ -26,9 +26,9 @@ public:
 	
 	AWeapon();
 	virtual void Tick(float DeltaTime) override;
-
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;//设置同步
 	void ShowPickupWidget(bool bShowWidget);
-
+	virtual void Dropped();
 protected:
 	
 	virtual void BeginPlay() override;
@@ -46,12 +46,34 @@ private:
 	UPROPERTY(VisibleAnywhere, Category = "Weapon Properties")
 		class USphereComponent* AreaSphere;
 
-	UPROPERTY(VisibleAnywhere)
+	UPROPERTY(ReplicatedUsing= OnRep_WeaponState, VisibleAnywhere, Category = "Weapon Properties")
 	EWeaponState WeaponState;
+
+	UFUNCTION()
+	void OnRep_WeaponState();
 
 	UPROPERTY(VisibleAnywhere, Category = "Weapon Properties")
 		class UWidgetComponent* PickupWidget;
+
+
+	UPROPERTY(EditAnywhere, Category = "Physics")
+		float LinearDamping = 0.1f; // 线性阻尼系数
+
+	UPROPERTY(EditAnywhere, Category = "Physics")
+		float AngularDamping = 0.1f; // 角阻尼系数
+
+	
+public:
+	void SetWeaponState(EWeaponState State);
+
+	UFUNCTION(Server,Reliable)
+		void ServerDropWeapon();
+
+	FORCEINLINE USphereComponent* GetAreaSphere() const { return AreaSphere; }
+	FORCEINLINE USkeletalMeshComponent* GetWeaponMesh() const { return WeaponMesh; }
 };
+
+
 
  
 

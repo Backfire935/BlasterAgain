@@ -17,7 +17,9 @@
 #include "GameFramework/PlayerState.h"
 #include"Components/WidgetComponent.h"
 #include "BlasterAgain/Weapon/Weapon.h"
+#include "BlasterAgain/BlasterComponent/CombatComponent.h"
 
+#pragma region Init
 ABlasterCharacter::ABlasterCharacter()
 {
 
@@ -50,6 +52,9 @@ ABlasterCharacter::ABlasterCharacter()
 	FollowCamera->Activate();
 	TPSCamera->SetActive(false);
 	TPSCamera->Deactivate();
+
+	Combat = CreateDefaultSubobject<UCombatComponent>(TEXT("CombatComponent"));
+	Combat->SetIsReplicated(true);
 }
 
 void ABlasterCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -59,6 +64,18 @@ void ABlasterCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Ou
 	DOREPLIFETIME_CONDITION(ABlasterCharacter, OverlappingWeapon, COND_OwnerOnly); 
 	
 }
+
+void ABlasterCharacter::PostInitializeComponents()
+{
+	Super::PostInitializeComponents();
+	if(Combat)
+	{
+		Combat->Character = this;//在请求初始化组件函数中设定了 CombatComponent组件中Character变量的值是谁.
+	}
+
+}
+
+
 
 void ABlasterCharacter::BeginPlay()
 {
@@ -74,6 +91,8 @@ void ABlasterCharacter::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 
 }
+
+#pragma endregion Init
 
 #pragma region PlayerName
 void ABlasterCharacter::ClientSetName_Implementation(const FString& Name)
@@ -181,6 +200,54 @@ void ABlasterCharacter::ServerNormalSpeedWalk_Implementation()
 	GetCharacterMovement()->MaxWalkSpeed = 450.f;
 }
 
+void ABlasterCharacter::EquipButtonPressed(const FInputActionValue& InputValue)
+{
+	if(Combat)
+	{
+		if(HasAuthority())
+		{
+			Combat->EquipWeapon(OverlappingWeapon);//如果就在Server上就直接执行
+		}
+		else
+		{
+			ServerEquipButtonPressed();//不然就执行RPC  
+		}
+	}
+}
+
+void ABlasterCharacter::ServerEquipButtonPressed_Implementation()
+{
+	//反正只在服务端调用，不用写HasAuthority 
+	if (Combat)
+	{
+		Combat->EquipWeapon(OverlappingWeapon);
+	}
+}
+
+void ABlasterCharacter::InputDropWeapon()
+{
+	if (Combat)
+	{
+		if (HasAuthority())
+		{
+			Combat->DropWeapon();//如果就在Server上就直接执行
+		}
+		else
+		{
+			ServerDropButtonPressed();//不然就执行RPC  
+		}
+	}
+}
+
+void ABlasterCharacter::ServerDropButtonPressed_Implementation()
+{
+	//反正只在服务端调用，不用写HasAuthority 
+	if (Combat)
+	{
+		Combat->DropWeapon();
+	}
+}
+
 
 #pragma endregion Input
 
@@ -205,9 +272,7 @@ void ABlasterCharacter::InputAimingReleased(const FInputActionValue& InputValue)
 
 }
 
-void ABlasterCharacter::InputDropWeapon()
-{
-}
+
 
 void ABlasterCharacter::InputReload(const FInputActionValue& InputValue)
 {
@@ -228,6 +293,8 @@ void ABlasterCharacter::InputShiftView(const FInputActionValue& InputValue)
 	//如果是客户端执行，让服务端去改变，再传递给各个客户端来完成同步的效果
 		ServerChangeView();
 }
+
+
 
 void ABlasterCharacter::ServerChangeView_Implementation()
 {
@@ -266,7 +333,12 @@ void ABlasterCharacter::ChangeCameraView()
 
 	}
 }
+
+
+
+
 #pragma endregion ChangeView
+
 
 #pragma region ShowOrHidePickupWidget
 
@@ -356,6 +428,10 @@ void ABlasterCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 
 		//按V切换视角
 		EnhancedInputComponent->BindAction(IA_ChangeView, ETriggerEvent::Triggered, this, &ABlasterCharacter::InputShiftView);
+
+		//按F拾取武器
+		EnhancedInputComponent->BindAction(IA_Equip, ETriggerEvent::Triggered, this, &ABlasterCharacter::EquipButtonPressed);
+
 
 		// 你可以通过更改"ETriggerEvent"枚举值，绑定到此处的任意触发器事件
 		//Input->BindAction(AimingInputAction, ETriggerEvent::Triggered, this, &AFPSBaseCharacter::SomeCallbackFunc);
