@@ -4,6 +4,7 @@
 #include "BlasterAgain/Character/BlasterCharacter.h"
 #include "Components/SphereComponent.h"
 #include "Components/WidgetComponent.h"
+#include "Engine/SkeletalMeshSocket.h"
 #include "Net/UnrealNetwork.h"
 #include "PhysicalMaterials/PhysicalMaterial.h"
 
@@ -65,8 +66,11 @@ void AWeapon::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeP
 	DOREPLIFETIME(AWeapon, WeaponState);
 }
 
-void AWeapon::OnRep_WeaponState()
+#pragma region WeaponState
+void AWeapon::OnRep_WeaponState()//处理武器不同状态时客户端武器的物理效果
 {
+	ABlasterCharacter* BlasterCharacter = Cast<ABlasterCharacter>(GetOwner());
+	const USkeletalMeshSocket* HandSocket = BlasterCharacter ? BlasterCharacter->GetMesh()->GetSocketByName(FName("RightHandSocket")) : nullptr;
 	switch (WeaponState)
 	{
 	case EWeaponState::EWS_Initial:
@@ -74,11 +78,15 @@ void AWeapon::OnRep_WeaponState()
 		break;
 	case  EWeaponState::EWS_Equipped :
 		ShowPickupWidget(false);
+		//关闭模拟物理
+		WeaponMesh->SetSimulatePhysics(false);
 		//关闭重力
 		WeaponMesh->SetEnableGravity(false);
 		WeaponMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision); // 关闭碰撞检测
-		//关闭模拟物理
-		WeaponMesh->SetSimulatePhysics(false);
+		if (HandSocket && BlasterCharacter)//!!!踩了一天的坑，服务端附加了客户端也得附加
+		{
+			HandSocket->AttachActor(this, BlasterCharacter->GetMesh()); //在插槽上将武器附加到身体上
+		}
 		break;
 	case EWeaponState::EWS_Dropped :
 		ShowPickupWidget(false);
@@ -116,7 +124,7 @@ void AWeapon::SetWeaponState(EWeaponState State)
 	}
 }
 
-void AWeapon::ServerDropWeapon_Implementation()
+void AWeapon::ServerDropWeapon_Implementation()//这个用来处理Server端武器的掉落效果，客户端的效果由WeaponState触发的OnRep_WeaponState完成
 {
 	FDetachmentTransformRules DetachRules(EDetachmentRule::KeepWorld, true);//这个变量是解绑组件的规则，参数意思是自动计算相对转换，以便分离组件维护相同的世界转换。
 	WeaponMesh->DetachFromComponent(DetachRules);//不论组件被附加到什么上面都会拆下来，自动解绑被绑在一起的组件
@@ -127,8 +135,7 @@ void AWeapon::ServerDropWeapon_Implementation()
 	WeaponMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics); // 启用碰撞检测和物理模拟
 	//开启重力
 	WeaponMesh->SetEnableGravity(true);
-
-	SetOwner(nullptr);//将拥有者设置为空
+	
 }
 
 void AWeapon::Dropped()
@@ -136,6 +143,8 @@ void AWeapon::Dropped()
 	SetWeaponState(EWeaponState::EWS_Dropped);//先将此件武器的状态的设为丢弃状态
 	ServerDropWeapon();
 }
+
+#pragma endregion WeaponState
 
 void AWeapon::OnSphereOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
 	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)

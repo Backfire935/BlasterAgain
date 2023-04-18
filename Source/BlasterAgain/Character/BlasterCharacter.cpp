@@ -33,14 +33,13 @@ ABlasterCharacter::ABlasterCharacter()
 
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
 	//摄像机绑到角色头上
-	FollowCamera->SetupAttachment(GetMesh(), FName(TEXT("head")));
+	FollowCamera->SetupAttachment(GetMesh(), FName(TEXT("FollowCameraSocket")));
 
 	//创建第三人称摄像机
 	TPSCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("TPSCamera"));
 	TPSCamera->SetupAttachment(CameraBoom);
 
 	FollowCamera->bUsePawnControlRotation = true;
-
 
 	//bUseControllerRotationYaw = false;
 	//GetCharacterMovement()->bOrientRotationToMovement = true;
@@ -55,6 +54,14 @@ ABlasterCharacter::ABlasterCharacter()
 
 	Combat = CreateDefaultSubobject<UCombatComponent>(TEXT("CombatComponent"));
 	Combat->SetIsReplicated(true);
+
+
+	// 获取当前材质插槽的数量 
+	int32 MaterialSlotIndex0 = GetMesh()->GetMaterialIndex("18 - Default");
+	int32 MaterialSlotIndex1 = GetMesh()->GetMaterialIndex("12 - Default");
+	// 设置为透明的材质
+	GetMesh()->SetMaterial(MaterialSlotIndex0, NormalMaterialDown);
+	GetMesh()->SetMaterial(MaterialSlotIndex1, NormalMaterialUp);
 }
 
 void ABlasterCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -75,21 +82,59 @@ void ABlasterCharacter::PostInitializeComponents()
 
 }
 
-
-
 void ABlasterCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
 	ServerSetPlayerName(LocalPlayerName);
-
+	ServerSetMaterial();
 }
-
 
 void ABlasterCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+}
+
+void ABlasterCharacter::ClientSetMaterial_Implementation()
+{
+		// 获取当前材质插槽的数量 
+		int32 MaterialSlotIndex0 = GetMesh()->GetMaterialIndex("18 - Default");//下半身
+		int32 MaterialSlotIndex1 = GetMesh()->GetMaterialIndex("12 - Default");//上半身
+		if (IsLocallyControlled())//如果是本机就本地设为透明
+		{
+			GetMesh()->SetMaterial(MaterialSlotIndex0, TransparentMaterial);
+			GetMesh()->SetMaterial(MaterialSlotIndex1, TransparentMaterial);
+		}
+		else//如果不是本机
+		{
+			// 设置为正常的材质
+			GetMesh()->SetMaterial(MaterialSlotIndex0, NormalMaterialDown);
+			GetMesh()->SetMaterial(MaterialSlotIndex1, NormalMaterialUp);
+		}
+}
+
+void ABlasterCharacter::ServerSetMaterial_Implementation()
+{
+	//别人看都正常，别人看不能是透明的
+	// 获取当前材质插槽的数量
+		// 获取当前材质插槽的数量 
+	int32 MaterialSlotIndex0 = GetMesh()->GetMaterialIndex("18 - Default");//下半身
+	int32 MaterialSlotIndex1 = GetMesh()->GetMaterialIndex("12 - Default");//上半身
+	
+	if(IsLocallyControlled())//如果是本机就本地设为透明，但下面的Client还是正常
+	{
+		GetMesh()->SetMaterial(MaterialSlotIndex0, TransparentMaterial);
+		GetMesh()->SetMaterial(MaterialSlotIndex1, TransparentMaterial);
+	}
+	else
+	{
+		// 设置为正常的材质
+		GetMesh()->SetMaterial(MaterialSlotIndex0, NormalMaterialDown);
+		GetMesh()->SetMaterial(MaterialSlotIndex1, NormalMaterialUp);
+	}
+	ClientSetMaterial();
+	
 }
 
 #pragma endregion Init
@@ -99,7 +144,7 @@ void ABlasterCharacter::ClientSetName_Implementation(const FString& Name)
 {
 	//设置玩家名称 Set Player Name
 	APlayerController* PlayerController = Cast<APlayerController>(GetController());
-	if (PlayerController != nullptr)
+	if (PlayerController->PlayerState)
 	{
 		PlayerController->PlayerState->SetPlayerName(Name);
 	}
@@ -248,6 +293,29 @@ void ABlasterCharacter::ServerDropButtonPressed_Implementation()
 	}
 }
 
+void ABlasterCharacter::CrouchButtonPressed(const FInputActionValue& InputValue)
+{
+		ServerCrouchButtonPressed();
+}
+
+void ABlasterCharacter::ClientCrouchButtonPressed_Implementation()
+{
+	//如果是服务端执行的，那么这个函数不执行，因为ServerCrouchButtonPressed执行过了。
+	if(!HasAuthority())
+	{
+		//下蹲逻辑
+		UE_LOG(LogTemp, Warning, TEXT("client"));
+	}
+
+}
+
+void ABlasterCharacter::ServerCrouchButtonPressed_Implementation()
+{
+	ClientCrouchButtonPressed();
+	//下蹲逻辑
+	UE_LOG(LogTemp,Warning,TEXT("server"));
+
+}
 
 #pragma endregion Input
 
@@ -274,6 +342,7 @@ void ABlasterCharacter::InputAimingReleased(const FInputActionValue& InputValue)
 
 
 
+
 void ABlasterCharacter::InputReload(const FInputActionValue& InputValue)
 {
 
@@ -295,7 +364,6 @@ void ABlasterCharacter::InputShiftView(const FInputActionValue& InputValue)
 }
 
 
-
 void ABlasterCharacter::ServerChangeView_Implementation()
 {
 	//需要修改服务器上的版本，因为服务器上的版本是用来同步给别的客户端的，别的客户端不与正在执行动作的客户端通信，别的客户端拿的是服务端的数据
@@ -313,7 +381,7 @@ void ABlasterCharacter::ClientChangeView_Implementation()
 void ABlasterCharacter::ChangeCameraView()
 {
 	// 判断当前激活的摄像机，并切换到另一个摄像机
-	if (FollowCamera->IsActive())
+	if (FollowCamera->IsActive())//切换到第三人称
 	{
 		FollowCamera->SetActive(false);
 		FollowCamera->Deactivate();
@@ -321,8 +389,18 @@ void ABlasterCharacter::ChangeCameraView()
 		TPSCamera->Activate();
 		GetCharacterMovement()->bOrientRotationToMovement = true;
 		bUseControllerRotationYaw = false;
+		if(IsLocallyControlled())
+		{
+			// 获取当前材质插槽的数量 
+			int32 MaterialSlotIndex0 = GetMesh()->GetMaterialIndex("18 - Default");//下半身
+			int32 MaterialSlotIndex1 = GetMesh()->GetMaterialIndex("12 - Default");//上半身
+			// 设置为正常的材质
+			GetMesh()->SetMaterial(MaterialSlotIndex0, NormalMaterialDown);
+			GetMesh()->SetMaterial(MaterialSlotIndex1, NormalMaterialUp);
+		}
+		
 	}
-	else
+	else//切换到第一人称
 	{
 		TPSCamera->SetActive(false);
 		TPSCamera->Deactivate();
@@ -330,10 +408,17 @@ void ABlasterCharacter::ChangeCameraView()
 		FollowCamera->Activate();
 		GetCharacterMovement()->bOrientRotationToMovement = false;
 		bUseControllerRotationYaw = true;
-
+		if (IsLocallyControlled())
+		{
+			// 获取当前材质插槽的数量 
+			int32 MaterialSlotIndex0 = GetMesh()->GetMaterialIndex("18 - Default");//下半身
+			int32 MaterialSlotIndex1 = GetMesh()->GetMaterialIndex("12 - Default");//上半身
+			// 设置为透明的材质
+			GetMesh()->SetMaterial(MaterialSlotIndex0, TransparentMaterial);
+			GetMesh()->SetMaterial(MaterialSlotIndex1, TransparentMaterial);
+		}
 	}
 }
-
 
 
 
@@ -357,6 +442,7 @@ void ABlasterCharacter::SetOverlappingWeapon(AWeapon* Weapon)
 	}
 }
 
+
 void ABlasterCharacter::OnRep_OverlappingWeapon(AWeapon* LastWeapon)
 {
 	if (OverlappingWeapon)
@@ -370,6 +456,12 @@ void ABlasterCharacter::OnRep_OverlappingWeapon(AWeapon* LastWeapon)
 }
 
 #pragma endregion ShowOrHidePickupWidget
+
+bool ABlasterCharacter::IsWeaponEquipped()
+{
+	return (Combat && Combat->EquippedWeapon);
+}
+
 
 void ABlasterCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
@@ -420,6 +512,9 @@ void ABlasterCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 
 		EnhancedInputComponent->BindAction(IA_ShiftReleased, ETriggerEvent::Triggered, this, &ABlasterCharacter::NormalSpeedWalk);
 
+		//按下Ctrl下蹲
+		EnhancedInputComponent->BindAction(IA_CrouchPressed, ETriggerEvent::Triggered, this, &ABlasterCharacter::CrouchButtonPressed);
+
 		//按G丢弃武器
 		EnhancedInputComponent->BindAction(IA_DropWeapon, ETriggerEvent::Triggered, this, &ABlasterCharacter::InputDropWeapon);
 
@@ -432,7 +527,7 @@ void ABlasterCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 		//按F拾取武器
 		EnhancedInputComponent->BindAction(IA_Equip, ETriggerEvent::Triggered, this, &ABlasterCharacter::EquipButtonPressed);
 
-
+		
 		// 你可以通过更改"ETriggerEvent"枚举值，绑定到此处的任意触发器事件
 		//Input->BindAction(AimingInputAction, ETriggerEvent::Triggered, this, &AFPSBaseCharacter::SomeCallbackFunc);
 

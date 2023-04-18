@@ -58,6 +58,7 @@ protected:
 
 	void InputAimingReleased(const FInputActionValue& InputValue);
 
+	void CrouchButtonPressed(const FInputActionValue& InputValue);
 	//按G丢弃武器
 	void InputDropWeapon();
 
@@ -73,7 +74,9 @@ protected:
 
 #pragma endregion InputFunction
 
-public:	
+public:
+
+#pragma region RPC
 	UFUNCTION(Client, Reliable)
 		void ClientSetName(const FString& Name);
 
@@ -104,7 +107,22 @@ public:
 	UFUNCTION(Server, Reliable)
 		void ServerDropButtonPressed();
 
-	
+	//按下下蹲键的RPC
+	UFUNCTION(Server, Reliable)
+		void ServerCrouchButtonPressed();
+
+	UFUNCTION(Client, Reliable)
+		void ClientCrouchButtonPressed();
+
+	//初始设置角色材质
+	UFUNCTION(Server, Reliable)
+		void ServerSetMaterial();
+
+	UFUNCTION(Client, Reliable)
+		void ClientSetMaterial();
+
+#pragma endregion RPC
+
 protected:
 	//游戏内鼠标灵敏度
 	UPROPERTY(EditAnywhere, Category = "Input")
@@ -130,6 +148,21 @@ private:
 	UPROPERTY(ReplicatedUsing= OnRep_OverlappingWeapon)
 	class AWeapon* OverlappingWeapon;
 
+	UFUNCTION()
+		void OnRep_OverlappingWeapon(AWeapon* LastWeapon);
+
+	UPROPERTY(VisibleAnywhere)
+		class UCombatComponent* Combat;
+
+	UPROPERTY(EditAnywhere, Category = "EffectMaterials")
+		UMaterialInterface* TransparentMaterial;//透明材质
+
+	UPROPERTY(EditAnywhere, Category = "EffectMaterials")
+		UMaterialInterface* NormalMaterialUp;//上半身正常材质
+
+	UPROPERTY(EditAnywhere, Category = "EffectMaterials")
+		UMaterialInterface* NormalMaterialDown;//下半身正常材质
+		
 #pragma region EnhancedInput
 	///增强输入
 	//两个映射表
@@ -181,6 +214,10 @@ private:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "EnhancedInput | Action", meta = (AllowPrivateAccess = "true"))
 		TObjectPtr<UInputAction> IA_ShiftReleased;
 
+	//按下Ctrl下蹲
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "EnhancedInput | Action", meta = (AllowPrivateAccess = "true"))
+		TObjectPtr<UInputAction> IA_CrouchPressed;
+
 	//按下G丢弃武器
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "EnhancedInput | Action", meta = (AllowPrivateAccess = "true"))
 		TObjectPtr<UInputAction> IA_DropWeapon;
@@ -199,18 +236,12 @@ private:
 	///
 #pragma endregion EnhancedInput
 
-	UFUNCTION()
-	void OnRep_OverlappingWeapon(AWeapon *LastWeapon);
-
-	UPROPERTY(VisibleAnywhere)
-		class UCombatComponent* Combat;
-
 
 
 public:
 	void SetOverlappingWeapon(AWeapon* Weapon);
 
-
+	bool IsWeaponEquipped();
 };
 
 
