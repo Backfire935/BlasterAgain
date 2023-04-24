@@ -18,7 +18,7 @@ void UOverheadWidget::ShowPlayerNetRole(APawn* InPawn)
 {
 	ENetRole LocalRole = InPawn->GetLocalRole();
 	FString Role;
-	switch(LocalRole)
+	switch (LocalRole)
 	{
 	case ENetRole::ROLE_Authority :
 		Role = FString("Authority");
@@ -53,6 +53,11 @@ void UOverheadWidget::ShowPlayerName(APawn *InPawn)
 		// 这里可以根据需要将 FString 转换为 std::string 或其他类型
 		// ...
 		FString LocalRoleString = FString::Printf(TEXT("%s"), *PlayerName);
+		SetDisplayText(LocalRoleString);
+	}
+	else
+	{
+		FString LocalRoleString = FString::Printf(TEXT("Unknown Player"));
 		SetDisplayText(LocalRoleString);
 	}
 

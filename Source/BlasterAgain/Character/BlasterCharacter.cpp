@@ -47,13 +47,15 @@ ABlasterCharacter::ABlasterCharacter()
 	OverHeadWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("OverheadWidget"));
 	OverHeadWidget->SetupAttachment(GetMesh());
 
-	FollowCamera->SetActive(true);
-	FollowCamera->Activate();
+	FollowCamera->SetActive(true); //激活第三人称摄像机，其实这个函数里面的实现就是下面Activate(),等开始游戏的时候切换到第一人称
+	FollowCamera->Activate();//还是激活，我不知道不写这行只写上面的行不行，不过我看了SetActive没有网络同步的内容，但是Activate()里面有Broadcast广播，所以我觉得还是留着吧，你可以测试下
 	TPSCamera->SetActive(false);
 	TPSCamera->Deactivate();
+	
 
-	Combat = CreateDefaultSubobject<UCombatComponent>(TEXT("CombatComponent"));
-	Combat->SetIsReplicated(true);
+	CombatComp = CreateDefaultSubobject<UCombatComponent>(TEXT("CombatComponent"));
+	CombatComp->SetIsReplicated(true);
+
 
 
 	// 获取当前材质插槽的数量 
@@ -62,6 +64,9 @@ ABlasterCharacter::ABlasterCharacter()
 	// 设置为透明的材质
 	GetMesh()->SetMaterial(MaterialSlotIndex0, NormalMaterialDown);
 	GetMesh()->SetMaterial(MaterialSlotIndex1, NormalMaterialUp);
+
+	GetCharacterMovement()->NavAgentProps.bCanCrouch = true;//相当于开启蓝图里角色移动组件的可蹲伏选项
+	
 }
 
 void ABlasterCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -75,11 +80,10 @@ void ABlasterCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Ou
 void ABlasterCharacter::PostInitializeComponents()
 {
 	Super::PostInitializeComponents();
-	if(Combat)
+	if(CombatComp)
 	{
-		Combat->Character = this;//在请求初始化组件函数中设定了 CombatComponent组件中Character变量的值是谁.
+		CombatComp->Character = this;//在请求初始化组件函数中设定了 CombatComponent组件中Character变量的值是谁.
 	}
-
 }
 
 void ABlasterCharacter::BeginPlay()
@@ -88,6 +92,20 @@ void ABlasterCharacter::BeginPlay()
 
 	ServerSetPlayerName(LocalPlayerName);
 	ServerSetMaterial();
+	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
+
+	if (HasAuthority() && IsLocallyControlled())
+	{
+		//服务端的本地就是服务端自己的客户端
+		ClientChangeView();
+		ClientChangeView();
+		return;
+	}
+	//如果是客户端执行，让服务端去改变，再传递给各个客户端来完成同步的效果
+	ServerChangeView();
+	ServerChangeView();
+
+	///
 }
 
 void ABlasterCharacter::Tick(float DeltaTime)
@@ -96,46 +114,6 @@ void ABlasterCharacter::Tick(float DeltaTime)
 
 }
 
-void ABlasterCharacter::ClientSetMaterial_Implementation()
-{
-		// 获取当前材质插槽的数量 
-		int32 MaterialSlotIndex0 = GetMesh()->GetMaterialIndex("18 - Default");//下半身
-		int32 MaterialSlotIndex1 = GetMesh()->GetMaterialIndex("12 - Default");//上半身
-		if (IsLocallyControlled())//如果是本机就本地设为透明
-		{
-			GetMesh()->SetMaterial(MaterialSlotIndex0, TransparentMaterial);
-			GetMesh()->SetMaterial(MaterialSlotIndex1, TransparentMaterial);
-		}
-		else//如果不是本机
-		{
-			// 设置为正常的材质
-			GetMesh()->SetMaterial(MaterialSlotIndex0, NormalMaterialDown);
-			GetMesh()->SetMaterial(MaterialSlotIndex1, NormalMaterialUp);
-		}
-}
-
-void ABlasterCharacter::ServerSetMaterial_Implementation()
-{
-	//别人看都正常，别人看不能是透明的
-	// 获取当前材质插槽的数量
-		// 获取当前材质插槽的数量 
-	int32 MaterialSlotIndex0 = GetMesh()->GetMaterialIndex("18 - Default");//下半身
-	int32 MaterialSlotIndex1 = GetMesh()->GetMaterialIndex("12 - Default");//上半身
-	
-	if(IsLocallyControlled())//如果是本机就本地设为透明，但下面的Client还是正常
-	{
-		GetMesh()->SetMaterial(MaterialSlotIndex0, TransparentMaterial);
-		GetMesh()->SetMaterial(MaterialSlotIndex1, TransparentMaterial);
-	}
-	else
-	{
-		// 设置为正常的材质
-		GetMesh()->SetMaterial(MaterialSlotIndex0, NormalMaterialDown);
-		GetMesh()->SetMaterial(MaterialSlotIndex1, NormalMaterialUp);
-	}
-	ClientSetMaterial();
-	
-}
 
 #pragma endregion Init
 
@@ -218,64 +196,64 @@ void ABlasterCharacter::OnJumpStoping(const FInputActionValue& InputValue)
 }
 
 
-
-void ABlasterCharacter::LowSpeedWalk(const FInputActionValue& InputValue)
+void ABlasterCharacter::RunSpeedWalk(const FInputActionValue& InputValue)
 {
-
-	GetCharacterMovement()->MaxWalkSpeed = 300.f;
-	ServerLowSpeedWalk();
+	GetCharacterMovement()->MaxWalkSpeed = RunSpeed;
+	ServerRunSpeed();
 }
 
 void ABlasterCharacter::NormalSpeedWalk(const FInputActionValue& InputValue)
 {
-
-	GetCharacterMovement()->MaxWalkSpeed = 450.f;
+	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
 	ServerNormalSpeedWalk();
 }
 
 
-void ABlasterCharacter::ServerLowSpeedWalk_Implementation()
+void ABlasterCharacter::ServerRunSpeed_Implementation()
 {
-	GetCharacterMovement()->MaxWalkSpeed = 300.f;
+	GetCharacterMovement()->MaxWalkSpeed = RunSpeed;
 }
 
 
 void ABlasterCharacter::ServerNormalSpeedWalk_Implementation()
 {
-	GetCharacterMovement()->MaxWalkSpeed = 450.f;
+	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
 }
 
 void ABlasterCharacter::EquipButtonPressed(const FInputActionValue& InputValue)
 {
-	if(Combat)
+	if(CombatComp)
 	{
 		if(HasAuthority())
 		{
-			Combat->EquipWeapon(OverlappingWeapon);//如果就在Server上就直接执行
+			CombatComp->EquipWeapon(OverlappingWeapon);//如果就在Server上就直接执行
 		}
 		else
 		{
 			ServerEquipButtonPressed();//不然就执行RPC  
 		}
+
 	}
+
+	
 }
 
 void ABlasterCharacter::ServerEquipButtonPressed_Implementation()
 {
 	//反正只在服务端调用，不用写HasAuthority 
-	if (Combat)
+	if (CombatComp)
 	{
-		Combat->EquipWeapon(OverlappingWeapon);
+		CombatComp->EquipWeapon(OverlappingWeapon);
 	}
 }
 
 void ABlasterCharacter::InputDropWeapon()
 {
-	if (Combat)
+	if (CombatComp)
 	{
 		if (HasAuthority())
 		{
-			Combat->DropWeapon();//如果就在Server上就直接执行
+			CombatComp->DropWeapon();//如果就在Server上就直接执行
 		}
 		else
 		{
@@ -287,36 +265,40 @@ void ABlasterCharacter::InputDropWeapon()
 void ABlasterCharacter::ServerDropButtonPressed_Implementation()
 {
 	//反正只在服务端调用，不用写HasAuthority 
-	if (Combat)
+	if (CombatComp)
 	{
-		Combat->DropWeapon();
+		CombatComp->DropWeapon();
 	}
 }
 
 void ABlasterCharacter::CrouchButtonPressed(const FInputActionValue& InputValue)
 {
-		ServerCrouchButtonPressed();
-}
-
-void ABlasterCharacter::ClientCrouchButtonPressed_Implementation()
-{
-	//如果是服务端执行的，那么这个函数不执行，因为ServerCrouchButtonPressed执行过了。
-	if(!HasAuthority())
+	if(bIsCrouched)
 	{
-		//下蹲逻辑
-		UE_LOG(LogTemp, Warning, TEXT("client"));
+		UnCrouch();
 	}
-
+	else
+	{
+		Crouch();
+	}
 }
 
-void ABlasterCharacter::ServerCrouchButtonPressed_Implementation()
+void ABlasterCharacter::InputAimingPressed(const FInputActionValue& InputValue)
 {
-	ClientCrouchButtonPressed();
-	//下蹲逻辑
-	UE_LOG(LogTemp,Warning,TEXT("server"));
+	if (CombatComp)
+	{
+		CombatComp->SetAiming(true);
 
+	}
 }
 
+void ABlasterCharacter::InputAimingReleased(const FInputActionValue& InputValue)
+{
+	if (CombatComp)
+	{
+		CombatComp->SetAiming(false);
+	}
+}
 #pragma endregion Input
 
 #pragma  region notstart
@@ -326,16 +308,6 @@ void ABlasterCharacter::FirePressed(const FInputActionValue& InputValue)
 }
 
 void ABlasterCharacter::FireReleased(const FInputActionValue& InputValue)
-{
-
-}
-
-void ABlasterCharacter::InputAimingPressed(const FInputActionValue& InputValue)
-{
-
-}
-
-void ABlasterCharacter::InputAimingReleased(const FInputActionValue& InputValue)
 {
 
 }
@@ -370,7 +342,7 @@ void ABlasterCharacter::ServerChangeView_Implementation()
 		ChangeCameraView();
 	//再去让正在执行动作的客户端去真正实现功能
 	
-		ClientChangeView();//注释此函数后，客户端角色能同步旋转但是不能改变视角，原因是没有收到Server发来的ClientChangeView()所以改变不了视角，但是和角色移动相关的属性是默认实现网络同步的，是否旋转属性在上面Server端被修改的时候就被同步到客户端了，因此不需要Server发来的ClientChangeView()也改变了旋转。
+		ClientChangeView();//注释此函数后，客户端角色能同步旋转但是不能改变视角，原因是没有收到Server发来的ClientChangeView()所以改变不了视角，但是和角色移动旋转相关的属性是默认实现网络同步的，是否旋转属性在上面Server端被修改的时候就被同步到客户端了，因此不需要Server发来的ClientChangeView()也改变了旋转。
 }
 
 void ABlasterCharacter::ClientChangeView_Implementation()
@@ -421,6 +393,46 @@ void ABlasterCharacter::ChangeCameraView()
 }
 
 
+void ABlasterCharacter::ClientSetMaterial_Implementation()
+{
+	// 获取当前材质插槽的数量 
+	int32 MaterialSlotIndex0 = GetMesh()->GetMaterialIndex("18 - Default");//下半身
+	int32 MaterialSlotIndex1 = GetMesh()->GetMaterialIndex("12 - Default");//上半身
+	if (IsLocallyControlled())//如果是本机就本地设为透明
+	{
+		GetMesh()->SetMaterial(MaterialSlotIndex0, TransparentMaterial);
+		GetMesh()->SetMaterial(MaterialSlotIndex1, TransparentMaterial);
+	}
+	else//如果不是本机
+	{
+		// 设置为正常的材质
+		GetMesh()->SetMaterial(MaterialSlotIndex0, NormalMaterialDown);
+		GetMesh()->SetMaterial(MaterialSlotIndex1, NormalMaterialUp);
+	}
+}
+
+void ABlasterCharacter::ServerSetMaterial_Implementation()
+{
+	//别人看都正常，别人看不能是透明的
+	// 获取当前材质插槽的数量
+		// 获取当前材质插槽的数量 
+	int32 MaterialSlotIndex0 = GetMesh()->GetMaterialIndex("18 - Default");//下半身
+	int32 MaterialSlotIndex1 = GetMesh()->GetMaterialIndex("12 - Default");//上半身
+
+	if (IsLocallyControlled())//如果是本机就本地设为透明，但下面的Client还是正常
+	{
+		GetMesh()->SetMaterial(MaterialSlotIndex0, TransparentMaterial);
+		GetMesh()->SetMaterial(MaterialSlotIndex1, TransparentMaterial);
+	}
+	else
+	{
+		// 设置为正常的材质
+		GetMesh()->SetMaterial(MaterialSlotIndex0, NormalMaterialDown);
+		GetMesh()->SetMaterial(MaterialSlotIndex1, NormalMaterialUp);
+	}
+	ClientSetMaterial();
+
+}
 
 #pragma endregion ChangeView
 
@@ -459,7 +471,17 @@ void ABlasterCharacter::OnRep_OverlappingWeapon(AWeapon* LastWeapon)
 
 bool ABlasterCharacter::IsWeaponEquipped()
 {
-	return (Combat && Combat->EquippedWeapon);
+	return (CombatComp && CombatComp->EquippedWeapon);
+}
+
+bool ABlasterCharacter::IsAiming()
+{
+	return (CombatComp && CombatComp->bAiming);
+}
+
+bool ABlasterCharacter::IsFirstPerson()
+{
+	return FollowCamera->IsActive();
 }
 
 
@@ -503,12 +525,12 @@ void ABlasterCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 
 		EnhancedInputComponent->BindAction(IA_FireReleased, ETriggerEvent::Triggered, this, &ABlasterCharacter::FireReleased);
 
-		//右键开关镜
+		//右键瞄准
 		EnhancedInputComponent->BindAction(IA_AimingPressed, ETriggerEvent::Triggered, this, &ABlasterCharacter::InputAimingPressed);
 
 		EnhancedInputComponent->BindAction(IA_AimingReleased, ETriggerEvent::Triggered, this, &ABlasterCharacter::InputAimingReleased);
 		//shift静步	
-		EnhancedInputComponent->BindAction(IA_ShiftPressed, ETriggerEvent::Triggered, this, &ABlasterCharacter::LowSpeedWalk);
+		EnhancedInputComponent->BindAction(IA_ShiftPressed, ETriggerEvent::Triggered, this, &ABlasterCharacter::RunSpeedWalk);
 
 		EnhancedInputComponent->BindAction(IA_ShiftReleased, ETriggerEvent::Triggered, this, &ABlasterCharacter::NormalSpeedWalk);
 

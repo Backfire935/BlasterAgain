@@ -44,7 +44,7 @@ protected:
 	void OnJumpStoping(const FInputActionValue& InputValue);
 
 	//按下左shift静步慢走
-	void LowSpeedWalk(const FInputActionValue& InputValue);
+	void RunSpeedWalk(const FInputActionValue& InputValue);
 
 	//松开左shift正常行走
 	void NormalSpeedWalk(const FInputActionValue& InputValue);
@@ -85,7 +85,7 @@ public:
 
 	//RPC角色减速
 	UFUNCTION(Server, Reliable)
-		void ServerLowSpeedWalk();
+		void ServerRunSpeed();
 
 	//RPC角色恢复速度
 	UFUNCTION(Server, Reliable)
@@ -107,12 +107,7 @@ public:
 	UFUNCTION(Server, Reliable)
 		void ServerDropButtonPressed();
 
-	//按下下蹲键的RPC
-	UFUNCTION(Server, Reliable)
-		void ServerCrouchButtonPressed();
 
-	UFUNCTION(Client, Reliable)
-		void ClientCrouchButtonPressed();
 
 	//初始设置角色材质
 	UFUNCTION(Server, Reliable)
@@ -127,6 +122,12 @@ protected:
 	//游戏内鼠标灵敏度
 	UPROPERTY(EditAnywhere, Category = "Input")
 		float TurnRateGamepad = 5.f;
+
+	UPROPERTY(EditAnywhere, Category = "Speed")
+		float RunSpeed = 437.5f;
+
+	UPROPERTY(EditAnywhere, Category = "Speed")
+		float WalkSpeed = 180.f;
 
 private:
 
@@ -152,7 +153,7 @@ private:
 		void OnRep_OverlappingWeapon(AWeapon* LastWeapon);
 
 	UPROPERTY(VisibleAnywhere)
-		class UCombatComponent* Combat;
+		class UCombatComponent* CombatComp;
 
 	UPROPERTY(EditAnywhere, Category = "EffectMaterials")
 		UMaterialInterface* TransparentMaterial;//透明材质
@@ -242,6 +243,10 @@ public:
 	void SetOverlappingWeapon(AWeapon* Weapon);
 
 	bool IsWeaponEquipped();
+
+	bool IsAiming();
+
+	bool IsFirstPerson();//获取是否是第一人称
 };
 
 
