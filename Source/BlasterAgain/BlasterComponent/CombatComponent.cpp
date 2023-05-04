@@ -20,10 +20,33 @@ void UCombatComponent::BeginPlay()
 	
 }
 
+#pragma region Aiming
 void UCombatComponent::SetAiming(bool bIsAiming)
 {
 	bAiming = bIsAiming;
 	ServerSetAiming(bAiming);
+	if(Character && bAiming)//是否在瞄准
+	{
+		if(Character->GetIsCrouch())//是否在下蹲
+		{
+			Character->GetCharacterMovement()->MaxWalkSpeedCrouched = Character->GetCrouchAimSpeed();//设置成下蹲瞄准的速度
+		}
+		else//站着
+		{
+				Character->GetCharacterMovement()->MaxWalkSpeed = Character->GetIsRunning() ? Character->GetRunAimSpeed() : Character->GetWalkAimSpeed();//是不是在奔跑 是设置成奔跑瞄准的速度  不是设置成行走瞄准的速度
+		}
+	}
+	else if(Character && !bAiming)//不再瞄准了
+	{
+		if (Character->GetIsCrouch())//在下蹲
+		{
+			Character->GetCharacterMovement()->MaxWalkSpeedCrouched = Character->GetCrouchSpeed();//恢复成下蹲的行走速度
+		}
+		else//站着
+		{
+				Character->GetCharacterMovement()->MaxWalkSpeed = Character->GetIsRunning() ? Character->GetRunSpeed() : Character->GetWalkSpeed();//是不是在奔跑，是设置成奔跑的速度 不是设置成行走的速度
+		}
+	}
 }
 
 
@@ -31,8 +54,30 @@ void UCombatComponent::SetAiming(bool bIsAiming)
 void UCombatComponent::ServerSetAiming_Implementation(bool bIsAiming)
 {
 	bAiming = bIsAiming;
+	if (Character && bAiming)//是否在瞄准
+	{
+		if (Character->GetIsCrouch())//是否在下蹲
+		{
+			Character->GetCharacterMovement()->MaxWalkSpeedCrouched = Character->GetCrouchAimSpeed();//设置成下蹲瞄准的速度
+		}
+		else//站着
+		{
+			Character->GetCharacterMovement()->MaxWalkSpeed = Character->GetIsRunning() ? Character->GetRunAimSpeed() : Character->GetWalkAimSpeed();//是不是在奔跑 是设置成奔跑瞄准的速度  不是设置成行走瞄准的速度
+		}
+	}
+	else if (Character && !bAiming)//不再瞄准了
+	{
+		if (Character->GetIsCrouch())//在下蹲
+		{
+			Character->GetCharacterMovement()->MaxWalkSpeedCrouched = Character->GetCrouchSpeed();//恢复成下蹲的行走速度
+		}
+		else//站着
+		{
+			Character->GetCharacterMovement()->MaxWalkSpeed = Character->GetIsRunning() ? Character->GetRunSpeed() : Character->GetWalkSpeed();//是不是在奔跑，是设置成奔跑的速度 不是设置成行走的速度
+		}
+	}
 }
-
+#pragma endregion Aiming
 
 void UCombatComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {

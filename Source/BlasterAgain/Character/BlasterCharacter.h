@@ -120,14 +120,34 @@ public:
 
 protected:
 	//游戏内鼠标灵敏度
-	UPROPERTY(EditAnywhere, Category = "Input")
+	UPROPERTY(BlueprintReadWrite,EditAnywhere, Category = "Input")
 		float TurnRateGamepad = 5.f;
 
-	UPROPERTY(EditAnywhere, Category = "Speed")
-		float RunSpeed = 437.5f;
+	UPROPERTY(BlueprintReadWrite,EditAnywhere, Category = "Speed")
+		float RunSpeed = 437.5f;//奔跑速度
 
-	UPROPERTY(EditAnywhere, Category = "Speed")
-		float WalkSpeed = 180.f;
+	UPROPERTY(BlueprintReadWrite,EditAnywhere, Category = "Speed")
+		float RunAimSpeed = 337.5f;//奔跑瞄准速度
+
+	UPROPERTY(BlueprintReadWrite,EditAnywhere, Category = "Speed")
+		float WalkSpeed = 210.f;//行走速度
+
+	UPROPERTY(BlueprintReadWrite,EditAnywhere, Category = "Speed")
+		float WalkAimSpeed = 180.f;//行走瞄准速度
+
+	UPROPERTY(BlueprintReadWrite,EditAnywhere, Category = "Speed")
+		float CrouchSpeed = 180.f;//下蹲速度
+
+	UPROPERTY(BlueprintReadWrite,EditAnywhere, Category = "Speed")
+		float CrouchAimSpeed = 150.f;//下蹲瞄准速度
+
+	UPROPERTY(Replicated)
+	bool IsRunning = false;
+
+	void AimOffset(float DeltaTime);
+	float AO_Yaw;
+	float AO_Pitch;
+	FRotator StartingAimRotation;
 
 private:
 
@@ -141,9 +161,9 @@ private:
 		class UCameraComponent* TPSCamera;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-		class UWidgetComponent* OverHeadWidget;
+		 class UWidgetComponent* OverHeadWidget;
 
-	UPROPERTY(EditAnywhere, Category = "Player Name")
+	UPROPERTY(BlueprintReadWrite,EditAnywhere, Category = "Player Name",meta = (AllowPrivateAccess = "true"))
 		FString LocalPlayerName = TEXT("Unknown Player");
 
 	UPROPERTY(ReplicatedUsing= OnRep_OverlappingWeapon)
@@ -155,15 +175,15 @@ private:
 	UPROPERTY(VisibleAnywhere)
 		class UCombatComponent* CombatComp;
 
-	UPROPERTY(EditAnywhere, Category = "EffectMaterials")
+	UPROPERTY(BlueprintReadWrite,EditAnywhere, Category = "EffectMaterials",meta = (AllowPrivateAccess = "true"))
 		UMaterialInterface* TransparentMaterial;//透明材质
 
-	UPROPERTY(EditAnywhere, Category = "EffectMaterials")
+	UPROPERTY(BlueprintReadWrite,EditAnywhere, Category = "EffectMaterials",meta = (AllowPrivateAccess = "true"))
 		UMaterialInterface* NormalMaterialUp;//上半身正常材质
 
-	UPROPERTY(EditAnywhere, Category = "EffectMaterials")
+	UPROPERTY(BlueprintReadWrite,EditAnywhere, Category = "EffectMaterials",meta = (AllowPrivateAccess = "true"))
 		UMaterialInterface* NormalMaterialDown;//下半身正常材质
-		
+	
 #pragma region EnhancedInput
 	///增强输入
 	//两个映射表
@@ -245,8 +265,22 @@ public:
 	bool IsWeaponEquipped();
 
 	bool IsAiming();
-
+	
 	bool IsFirstPerson();//获取是否是第一人称
+
+	AWeapon* GetEquippedWeapon();
+	
+	FORCEINLINE bool GetIsCrouch() { return bIsCrouched; }//获取是否是下蹲的
+	FORCEINLINE float GetWalkSpeed() { return WalkSpeed; }//行走速度
+	FORCEINLINE float GetRunSpeed() { return RunSpeed; }//奔跑速度
+	FORCEINLINE float GetCrouchSpeed() { return CrouchSpeed; }//下蹲速度
+	FORCEINLINE float GetRunAimSpeed() { return RunAimSpeed; }//奔跑瞄准速度
+	FORCEINLINE float GetCrouchAimSpeed() { return CrouchAimSpeed; }//下蹲瞄准速度
+	FORCEINLINE float GetWalkAimSpeed() { return WalkAimSpeed; }//行走瞄准速度
+	FORCEINLINE float GetIsRunning() { return IsRunning; }//是否奔跑
+	FORCEINLINE float GetAO_Yaw() const { return AO_Yaw;}
+	FORCEINLINE float GetAO_Pitch() const { return AO_Pitch;}
+
 };
 
 

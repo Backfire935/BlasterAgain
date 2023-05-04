@@ -32,10 +32,10 @@ ABlasterCharacter::ABlasterCharacter()
 	CameraBoom->bUsePawnControlRotation = true;
 
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
-	//ÉãÏñ»ú°óµ½½ÇÉ«Í·ÉÏ
+	//æ‘„åƒæœºç»‘åˆ°è§’è‰²å¤´ä¸Š
 	FollowCamera->SetupAttachment(GetMesh(), FName(TEXT("FollowCameraSocket")));
 
-	//´´½¨µÚÈıÈË³ÆÉãÏñ»ú
+	//åˆ›å»ºç¬¬ä¸‰äººç§°æ‘„åƒæœº
 	TPSCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("TPSCamera"));
 	TPSCamera->SetupAttachment(CameraBoom);
 
@@ -47,8 +47,8 @@ ABlasterCharacter::ABlasterCharacter()
 	OverHeadWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("OverheadWidget"));
 	OverHeadWidget->SetupAttachment(GetMesh());
 
-	FollowCamera->SetActive(true); //¼¤»îµÚÈıÈË³ÆÉãÏñ»ú£¬ÆäÊµÕâ¸öº¯ÊıÀïÃæµÄÊµÏÖ¾ÍÊÇÏÂÃæActivate(),µÈ¿ªÊ¼ÓÎÏ·µÄÊ±ºòÇĞ»»µ½µÚÒ»ÈË³Æ
-	FollowCamera->Activate();//»¹ÊÇ¼¤»î£¬ÎÒ²»ÖªµÀ²»Ğ´ÕâĞĞÖ»Ğ´ÉÏÃæµÄĞĞ²»ĞĞ£¬²»¹ıÎÒ¿´ÁËSetActiveÃ»ÓĞÍøÂçÍ¬²½µÄÄÚÈİ£¬µ«ÊÇActivate()ÀïÃæÓĞBroadcast¹ã²¥£¬ËùÒÔÎÒ¾õµÃ»¹ÊÇÁô×Å°É£¬Äã¿ÉÒÔ²âÊÔÏÂ
+	FollowCamera->SetActive(true); //æ¿€æ´»ç¬¬ä¸‰äººç§°æ‘„åƒæœºï¼Œå…¶å®è¿™ä¸ªå‡½æ•°é‡Œé¢çš„å®ç°å°±æ˜¯ä¸‹é¢Activate(),ç­‰å¼€å§‹æ¸¸æˆçš„æ—¶å€™åˆ‡æ¢åˆ°ç¬¬ä¸€äººç§°
+	FollowCamera->Activate();//è¿˜æ˜¯æ¿€æ´»ï¼Œæˆ‘ä¸çŸ¥é“ä¸å†™è¿™è¡Œåªå†™ä¸Šé¢çš„è¡Œä¸è¡Œï¼Œä¸è¿‡æˆ‘çœ‹äº†SetActiveæ²¡æœ‰ç½‘ç»œåŒæ­¥çš„å†…å®¹ï¼Œä½†æ˜¯Activate()é‡Œé¢æœ‰Broadcastå¹¿æ’­ï¼Œæ‰€ä»¥æˆ‘è§‰å¾—è¿˜æ˜¯ç•™ç€å§ï¼Œä½ å¯ä»¥æµ‹è¯•ä¸‹
 	TPSCamera->SetActive(false);
 	TPSCamera->Deactivate();
 	
@@ -58,14 +58,14 @@ ABlasterCharacter::ABlasterCharacter()
 
 
 
-	// »ñÈ¡µ±Ç°²ÄÖÊ²å²ÛµÄÊıÁ¿ 
+	// è·å–å½“å‰æè´¨æ’æ§½çš„æ•°é‡ 
 	int32 MaterialSlotIndex0 = GetMesh()->GetMaterialIndex("18 - Default");
 	int32 MaterialSlotIndex1 = GetMesh()->GetMaterialIndex("12 - Default");
-	// ÉèÖÃÎªÍ¸Ã÷µÄ²ÄÖÊ
+	// è®¾ç½®ä¸ºé€æ˜çš„æè´¨
 	GetMesh()->SetMaterial(MaterialSlotIndex0, NormalMaterialDown);
 	GetMesh()->SetMaterial(MaterialSlotIndex1, NormalMaterialUp);
 
-	GetCharacterMovement()->NavAgentProps.bCanCrouch = true;//Ïàµ±ÓÚ¿ªÆôÀ¶Í¼Àï½ÇÉ«ÒÆ¶¯×é¼şµÄ¿É¶×·üÑ¡Ïî
+	GetCharacterMovement()->NavAgentProps.bCanCrouch = true;//ç›¸å½“äºå¼€å¯è“å›¾é‡Œè§’è‰²ç§»åŠ¨ç»„ä»¶çš„å¯è¹²ä¼é€‰é¡¹
 	
 }
 
@@ -74,7 +74,7 @@ void ABlasterCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Ou
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME_CONDITION(ABlasterCharacter, OverlappingWeapon, COND_OwnerOnly); 
-	
+	DOREPLIFETIME(ABlasterCharacter, IsRunning);
 }
 
 void ABlasterCharacter::PostInitializeComponents()
@@ -82,7 +82,7 @@ void ABlasterCharacter::PostInitializeComponents()
 	Super::PostInitializeComponents();
 	if(CombatComp)
 	{
-		CombatComp->Character = this;//ÔÚÇëÇó³õÊ¼»¯×é¼şº¯ÊıÖĞÉè¶¨ÁË CombatComponent×é¼şÖĞCharacter±äÁ¿µÄÖµÊÇË­.
+		CombatComp->Character = this;//åœ¨è¯·æ±‚åˆå§‹åŒ–ç»„ä»¶å‡½æ•°ä¸­è®¾å®šäº† CombatComponentç»„ä»¶ä¸­Characterå˜é‡çš„å€¼æ˜¯è°.
 	}
 }
 
@@ -96,12 +96,12 @@ void ABlasterCharacter::BeginPlay()
 
 	if (HasAuthority() && IsLocallyControlled())
 	{
-		//·şÎñ¶ËµÄ±¾µØ¾ÍÊÇ·şÎñ¶Ë×Ô¼ºµÄ¿Í»§¶Ë
+		//æœåŠ¡ç«¯çš„æœ¬åœ°å°±æ˜¯æœåŠ¡ç«¯è‡ªå·±çš„å®¢æˆ·ç«¯
 		ClientChangeView();
 		ClientChangeView();
 		return;
 	}
-	//Èç¹ûÊÇ¿Í»§¶ËÖ´ĞĞ£¬ÈÃ·şÎñ¶ËÈ¥¸Ä±ä£¬ÔÙ´«µİ¸ø¸÷¸ö¿Í»§¶ËÀ´Íê³ÉÍ¬²½µÄĞ§¹û
+	//å¦‚æœæ˜¯å®¢æˆ·ç«¯æ‰§è¡Œï¼Œè®©æœåŠ¡ç«¯å»æ”¹å˜ï¼Œå†ä¼ é€’ç»™å„ä¸ªå®¢æˆ·ç«¯æ¥å®ŒæˆåŒæ­¥çš„æ•ˆæœ
 	ServerChangeView();
 	ServerChangeView();
 
@@ -111,7 +111,7 @@ void ABlasterCharacter::BeginPlay()
 void ABlasterCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-
+	AimOffset(DeltaTime);
 }
 
 
@@ -120,7 +120,7 @@ void ABlasterCharacter::Tick(float DeltaTime)
 #pragma region PlayerName
 void ABlasterCharacter::ClientSetName_Implementation(const FString& Name)
 {
-	//ÉèÖÃÍæ¼ÒÃû³Æ Set Player Name
+	//è®¾ç½®ç©å®¶åç§° Set Player Name
 	APlayerController* PlayerController = Cast<APlayerController>(GetController());
 	if (PlayerController->PlayerState)
 	{
@@ -133,9 +133,9 @@ void ABlasterCharacter::ServerSetPlayerName_Implementation(const FString& Player
 	APlayerController* PlayerController = Cast<APlayerController>(GetController());
 	if (PlayerController)
 	{
-		// ÔÚ·şÎñ¶ËÉèÖÃÍæ¼ÒÃû³Æ Set player name in server
+		// åœ¨æœåŠ¡ç«¯è®¾ç½®ç©å®¶åç§° Set player name in server
 		PlayerController->PlayerState->SetPlayerName(PlayerName);
-		// µ÷ÓÃClientSetPlayerNameº¯ÊıÔÚ¿Í»§¶ËÉèÖÃÍæ¼ÒÃû³Æ use ClientSetPlayerName to set player name in client 
+		// è°ƒç”¨ClientSetPlayerNameå‡½æ•°åœ¨å®¢æˆ·ç«¯è®¾ç½®ç©å®¶åç§° use ClientSetPlayerName to set player name in client 
 		ClientSetName(PlayerName);
 	}
 }
@@ -149,10 +149,10 @@ void ABlasterCharacter::MoveForward(const FInputActionValue& InputValue)
 
 	if ((Controller != nullptr) && (value != 0.f))
 	{
-		// ÅĞ¶ÏÄÄ¸öĞı×ª·½ÏòÊÇÏòÇ°µÄ
+		// åˆ¤æ–­å“ªä¸ªæ—‹è½¬æ–¹å‘æ˜¯å‘å‰çš„
 		const FRotator Rotation = Controller->GetControlRotation();
 		const FRotator YawRotation(0, Rotation.Yaw, 0);
-		// »ñÈ¡ÏòÇ°µÄÏòÁ¿
+		// è·å–å‘å‰çš„å‘é‡
 		const FVector Direction = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
 		AddMovementInput(Direction, value);
 	}
@@ -165,10 +165,10 @@ void ABlasterCharacter::MoveRight(const FInputActionValue& InputValue)
 
 	if (Controller != nullptr && value != 0.f)
 	{
-		// ÅĞ¶ÏÄÄ¸öĞı×ª·½ÏòÊÇÏòÓÒµÄ
+		// åˆ¤æ–­å“ªä¸ªæ—‹è½¬æ–¹å‘æ˜¯å‘å³çš„
 		const FRotator Rotation = Controller->GetControlRotation();
 		const FRotator YawRotation(0, Rotation.Yaw, 0);
-		// »ñÈ¡ÏòÓÒµÄÏòÁ¿
+		// è·å–å‘å³çš„å‘é‡
 		const FVector Direction = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
 		AddMovementInput(Direction, value);
 	}
@@ -188,6 +188,10 @@ void ABlasterCharacter::LookUpRate(const FInputActionValue& InputValue)
 void ABlasterCharacter::OnJump(const FInputActionValue& InputValue)
 {
 	Jump();
+	if(bIsCrouched)
+	{
+		UnCrouch();
+	}
 }
 
 void ABlasterCharacter::OnJumpStoping(const FInputActionValue& InputValue)
@@ -200,24 +204,28 @@ void ABlasterCharacter::RunSpeedWalk(const FInputActionValue& InputValue)
 {
 	GetCharacterMovement()->MaxWalkSpeed = RunSpeed;
 	ServerRunSpeed();
+	IsRunning = true;
 }
 
 void ABlasterCharacter::NormalSpeedWalk(const FInputActionValue& InputValue)
 {
 	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
 	ServerNormalSpeedWalk();
+	IsRunning = false;
 }
 
 
 void ABlasterCharacter::ServerRunSpeed_Implementation()
 {
 	GetCharacterMovement()->MaxWalkSpeed = RunSpeed;
+	IsRunning = true;
 }
 
 
 void ABlasterCharacter::ServerNormalSpeedWalk_Implementation()
 {
 	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
+	IsRunning = false;
 }
 
 void ABlasterCharacter::EquipButtonPressed(const FInputActionValue& InputValue)
@@ -226,11 +234,11 @@ void ABlasterCharacter::EquipButtonPressed(const FInputActionValue& InputValue)
 	{
 		if(HasAuthority())
 		{
-			CombatComp->EquipWeapon(OverlappingWeapon);//Èç¹û¾ÍÔÚServerÉÏ¾ÍÖ±½ÓÖ´ĞĞ
+			CombatComp->EquipWeapon(OverlappingWeapon);//å¦‚æœå°±åœ¨Serverä¸Šå°±ç›´æ¥æ‰§è¡Œ
 		}
 		else
 		{
-			ServerEquipButtonPressed();//²»È»¾ÍÖ´ĞĞRPC  
+			ServerEquipButtonPressed();//ä¸ç„¶å°±æ‰§è¡ŒRPC  
 		}
 
 	}
@@ -240,7 +248,7 @@ void ABlasterCharacter::EquipButtonPressed(const FInputActionValue& InputValue)
 
 void ABlasterCharacter::ServerEquipButtonPressed_Implementation()
 {
-	//·´ÕıÖ»ÔÚ·şÎñ¶Ëµ÷ÓÃ£¬²»ÓÃĞ´HasAuthority 
+	//åæ­£åªåœ¨æœåŠ¡ç«¯è°ƒç”¨ï¼Œä¸ç”¨å†™HasAuthority 
 	if (CombatComp)
 	{
 		CombatComp->EquipWeapon(OverlappingWeapon);
@@ -253,18 +261,18 @@ void ABlasterCharacter::InputDropWeapon()
 	{
 		if (HasAuthority())
 		{
-			CombatComp->DropWeapon();//Èç¹û¾ÍÔÚServerÉÏ¾ÍÖ±½ÓÖ´ĞĞ
+			CombatComp->DropWeapon();//å¦‚æœå°±åœ¨Serverä¸Šå°±ç›´æ¥æ‰§è¡Œ
 		}
 		else
 		{
-			ServerDropButtonPressed();//²»È»¾ÍÖ´ĞĞRPC  
+			ServerDropButtonPressed();//ä¸ç„¶å°±æ‰§è¡ŒRPC  
 		}
 	}
 }
 
 void ABlasterCharacter::ServerDropButtonPressed_Implementation()
 {
-	//·´ÕıÖ»ÔÚ·şÎñ¶Ëµ÷ÓÃ£¬²»ÓÃĞ´HasAuthority 
+	//åæ­£åªåœ¨æœåŠ¡ç«¯è°ƒç”¨ï¼Œä¸ç”¨å†™HasAuthority 
 	if (CombatComp)
 	{
 		CombatComp->DropWeapon();
@@ -324,25 +332,25 @@ void ABlasterCharacter::InputReload(const FInputActionValue& InputValue)
 #pragma region ChangeView
 void ABlasterCharacter::InputShiftView(const FInputActionValue& InputValue)
 {
-	//Èç¹ûÊÇ·şÎñ¶ËÖ´ĞĞ£¬¾ÍÏàµ±ÓÚµ÷ÓÃÒ»´Î±¾µØ¿Í»§¶Ë£¬È»ºóÖ±½Óreturn
+	//å¦‚æœæ˜¯æœåŠ¡ç«¯æ‰§è¡Œï¼Œå°±ç›¸å½“äºè°ƒç”¨ä¸€æ¬¡æœ¬åœ°å®¢æˆ·ç«¯ï¼Œç„¶åç›´æ¥return
 	if(HasAuthority())
 	{
-		//·şÎñ¶ËµÄ±¾µØ¾ÍÊÇ·şÎñ¶Ë×Ô¼ºµÄ¿Í»§¶Ë
+		//æœåŠ¡ç«¯çš„æœ¬åœ°å°±æ˜¯æœåŠ¡ç«¯è‡ªå·±çš„å®¢æˆ·ç«¯
 		ClientChangeView();
 		return;
 	}
-	//Èç¹ûÊÇ¿Í»§¶ËÖ´ĞĞ£¬ÈÃ·şÎñ¶ËÈ¥¸Ä±ä£¬ÔÙ´«µİ¸ø¸÷¸ö¿Í»§¶ËÀ´Íê³ÉÍ¬²½µÄĞ§¹û
+	//å¦‚æœæ˜¯å®¢æˆ·ç«¯æ‰§è¡Œï¼Œè®©æœåŠ¡ç«¯å»æ”¹å˜ï¼Œå†ä¼ é€’ç»™å„ä¸ªå®¢æˆ·ç«¯æ¥å®ŒæˆåŒæ­¥çš„æ•ˆæœ
 		ServerChangeView();
 }
 
 
 void ABlasterCharacter::ServerChangeView_Implementation()
 {
-	//ĞèÒªĞŞ¸Ä·şÎñÆ÷ÉÏµÄ°æ±¾£¬ÒòÎª·şÎñÆ÷ÉÏµÄ°æ±¾ÊÇÓÃÀ´Í¬²½¸ø±ğµÄ¿Í»§¶ËµÄ£¬±ğµÄ¿Í»§¶Ë²»ÓëÕıÔÚÖ´ĞĞ¶¯×÷µÄ¿Í»§¶ËÍ¨ĞÅ£¬±ğµÄ¿Í»§¶ËÄÃµÄÊÇ·şÎñ¶ËµÄÊı¾İ
+	//éœ€è¦ä¿®æ”¹æœåŠ¡å™¨ä¸Šçš„ç‰ˆæœ¬ï¼Œå› ä¸ºæœåŠ¡å™¨ä¸Šçš„ç‰ˆæœ¬æ˜¯ç”¨æ¥åŒæ­¥ç»™åˆ«çš„å®¢æˆ·ç«¯çš„ï¼Œåˆ«çš„å®¢æˆ·ç«¯ä¸ä¸æ­£åœ¨æ‰§è¡ŒåŠ¨ä½œçš„å®¢æˆ·ç«¯é€šä¿¡ï¼Œåˆ«çš„å®¢æˆ·ç«¯æ‹¿çš„æ˜¯æœåŠ¡ç«¯çš„æ•°æ®
 		ChangeCameraView();
-	//ÔÙÈ¥ÈÃÕıÔÚÖ´ĞĞ¶¯×÷µÄ¿Í»§¶ËÈ¥ÕæÕıÊµÏÖ¹¦ÄÜ
+	//å†å»è®©æ­£åœ¨æ‰§è¡ŒåŠ¨ä½œçš„å®¢æˆ·ç«¯å»çœŸæ­£å®ç°åŠŸèƒ½
 	
-		ClientChangeView();//×¢ÊÍ´Ëº¯Êıºó£¬¿Í»§¶Ë½ÇÉ«ÄÜÍ¬²½Ğı×ªµ«ÊÇ²»ÄÜ¸Ä±äÊÓ½Ç£¬Ô­ÒòÊÇÃ»ÓĞÊÕµ½Server·¢À´µÄClientChangeView()ËùÒÔ¸Ä±ä²»ÁËÊÓ½Ç£¬µ«ÊÇºÍ½ÇÉ«ÒÆ¶¯Ğı×ªÏà¹ØµÄÊôĞÔÊÇÄ¬ÈÏÊµÏÖÍøÂçÍ¬²½µÄ£¬ÊÇ·ñĞı×ªÊôĞÔÔÚÉÏÃæServer¶Ë±»ĞŞ¸ÄµÄÊ±ºò¾Í±»Í¬²½µ½¿Í»§¶ËÁË£¬Òò´Ë²»ĞèÒªServer·¢À´µÄClientChangeView()Ò²¸Ä±äÁËĞı×ª¡£
+		ClientChangeView();//æ³¨é‡Šæ­¤å‡½æ•°åï¼Œå®¢æˆ·ç«¯è§’è‰²èƒ½åŒæ­¥æ—‹è½¬ä½†æ˜¯ä¸èƒ½æ”¹å˜è§†è§’ï¼ŒåŸå› æ˜¯æ²¡æœ‰æ”¶åˆ°Serverå‘æ¥çš„ClientChangeView()æ‰€ä»¥æ”¹å˜ä¸äº†è§†è§’ï¼Œä½†æ˜¯å’Œè§’è‰²ç§»åŠ¨æ—‹è½¬ç›¸å…³çš„å±æ€§æ˜¯é»˜è®¤å®ç°ç½‘ç»œåŒæ­¥çš„ï¼Œæ˜¯å¦æ—‹è½¬å±æ€§åœ¨ä¸Šé¢Serverç«¯è¢«ä¿®æ”¹çš„æ—¶å€™å°±è¢«åŒæ­¥åˆ°å®¢æˆ·ç«¯äº†ï¼Œå› æ­¤ä¸éœ€è¦Serverå‘æ¥çš„ClientChangeView()ä¹Ÿæ”¹å˜äº†æ—‹è½¬ã€‚
 }
 
 void ABlasterCharacter::ClientChangeView_Implementation()
@@ -352,8 +360,8 @@ void ABlasterCharacter::ClientChangeView_Implementation()
 
 void ABlasterCharacter::ChangeCameraView()
 {
-	// ÅĞ¶Ïµ±Ç°¼¤»îµÄÉãÏñ»ú£¬²¢ÇĞ»»µ½ÁíÒ»¸öÉãÏñ»ú
-	if (FollowCamera->IsActive())//ÇĞ»»µ½µÚÈıÈË³Æ
+	// åˆ¤æ–­å½“å‰æ¿€æ´»çš„æ‘„åƒæœºï¼Œå¹¶åˆ‡æ¢åˆ°å¦ä¸€ä¸ªæ‘„åƒæœº
+	if (FollowCamera->IsActive())//åˆ‡æ¢åˆ°ç¬¬ä¸‰äººç§°
 	{
 		FollowCamera->SetActive(false);
 		FollowCamera->Deactivate();
@@ -363,16 +371,16 @@ void ABlasterCharacter::ChangeCameraView()
 		bUseControllerRotationYaw = false;
 		if(IsLocallyControlled())
 		{
-			// »ñÈ¡µ±Ç°²ÄÖÊ²å²ÛµÄÊıÁ¿ 
-			int32 MaterialSlotIndex0 = GetMesh()->GetMaterialIndex("18 - Default");//ÏÂ°ëÉí
-			int32 MaterialSlotIndex1 = GetMesh()->GetMaterialIndex("12 - Default");//ÉÏ°ëÉí
-			// ÉèÖÃÎªÕı³£µÄ²ÄÖÊ
+			// è·å–å½“å‰æè´¨æ’æ§½çš„æ•°é‡ 
+			int32 MaterialSlotIndex0 = GetMesh()->GetMaterialIndex("18 - Default");//ä¸‹åŠèº«
+			int32 MaterialSlotIndex1 = GetMesh()->GetMaterialIndex("12 - Default");//ä¸ŠåŠèº«
+			// è®¾ç½®ä¸ºæ­£å¸¸çš„æè´¨
 			GetMesh()->SetMaterial(MaterialSlotIndex0, NormalMaterialDown);
 			GetMesh()->SetMaterial(MaterialSlotIndex1, NormalMaterialUp);
 		}
 		
 	}
-	else//ÇĞ»»µ½µÚÒ»ÈË³Æ
+	else//åˆ‡æ¢åˆ°ç¬¬ä¸€äººç§°
 	{
 		TPSCamera->SetActive(false);
 		TPSCamera->Deactivate();
@@ -382,10 +390,10 @@ void ABlasterCharacter::ChangeCameraView()
 		bUseControllerRotationYaw = true;
 		if (IsLocallyControlled())
 		{
-			// »ñÈ¡µ±Ç°²ÄÖÊ²å²ÛµÄÊıÁ¿ 
-			int32 MaterialSlotIndex0 = GetMesh()->GetMaterialIndex("18 - Default");//ÏÂ°ëÉí
-			int32 MaterialSlotIndex1 = GetMesh()->GetMaterialIndex("12 - Default");//ÉÏ°ëÉí
-			// ÉèÖÃÎªÍ¸Ã÷µÄ²ÄÖÊ
+			// è·å–å½“å‰æè´¨æ’æ§½çš„æ•°é‡ 
+			int32 MaterialSlotIndex0 = GetMesh()->GetMaterialIndex("18 - Default");//ä¸‹åŠèº«
+			int32 MaterialSlotIndex1 = GetMesh()->GetMaterialIndex("12 - Default");//ä¸ŠåŠèº«
+			// è®¾ç½®ä¸ºé€æ˜çš„æè´¨
 			GetMesh()->SetMaterial(MaterialSlotIndex0, TransparentMaterial);
 			GetMesh()->SetMaterial(MaterialSlotIndex1, TransparentMaterial);
 		}
@@ -395,17 +403,17 @@ void ABlasterCharacter::ChangeCameraView()
 
 void ABlasterCharacter::ClientSetMaterial_Implementation()
 {
-	// »ñÈ¡µ±Ç°²ÄÖÊ²å²ÛµÄÊıÁ¿ 
-	int32 MaterialSlotIndex0 = GetMesh()->GetMaterialIndex("18 - Default");//ÏÂ°ëÉí
-	int32 MaterialSlotIndex1 = GetMesh()->GetMaterialIndex("12 - Default");//ÉÏ°ëÉí
-	if (IsLocallyControlled())//Èç¹ûÊÇ±¾»ú¾Í±¾µØÉèÎªÍ¸Ã÷
+	// è·å–å½“å‰æè´¨æ’æ§½çš„æ•°é‡ 
+	int32 MaterialSlotIndex0 = GetMesh()->GetMaterialIndex("18 - Default");//ä¸‹åŠèº«
+	int32 MaterialSlotIndex1 = GetMesh()->GetMaterialIndex("12 - Default");//ä¸ŠåŠèº«
+	if (IsLocallyControlled())//å¦‚æœæ˜¯æœ¬æœºå°±æœ¬åœ°è®¾ä¸ºé€æ˜
 	{
 		GetMesh()->SetMaterial(MaterialSlotIndex0, TransparentMaterial);
 		GetMesh()->SetMaterial(MaterialSlotIndex1, TransparentMaterial);
 	}
-	else//Èç¹û²»ÊÇ±¾»ú
+	else//å¦‚æœä¸æ˜¯æœ¬æœº
 	{
-		// ÉèÖÃÎªÕı³£µÄ²ÄÖÊ
+		// è®¾ç½®ä¸ºæ­£å¸¸çš„æè´¨
 		GetMesh()->SetMaterial(MaterialSlotIndex0, NormalMaterialDown);
 		GetMesh()->SetMaterial(MaterialSlotIndex1, NormalMaterialUp);
 	}
@@ -413,20 +421,20 @@ void ABlasterCharacter::ClientSetMaterial_Implementation()
 
 void ABlasterCharacter::ServerSetMaterial_Implementation()
 {
-	//±ğÈË¿´¶¼Õı³££¬±ğÈË¿´²»ÄÜÊÇÍ¸Ã÷µÄ
-	// »ñÈ¡µ±Ç°²ÄÖÊ²å²ÛµÄÊıÁ¿
-		// »ñÈ¡µ±Ç°²ÄÖÊ²å²ÛµÄÊıÁ¿ 
-	int32 MaterialSlotIndex0 = GetMesh()->GetMaterialIndex("18 - Default");//ÏÂ°ëÉí
-	int32 MaterialSlotIndex1 = GetMesh()->GetMaterialIndex("12 - Default");//ÉÏ°ëÉí
+	//åˆ«äººçœ‹éƒ½æ­£å¸¸ï¼Œåˆ«äººçœ‹ä¸èƒ½æ˜¯é€æ˜çš„
+	// è·å–å½“å‰æè´¨æ’æ§½çš„æ•°é‡
+		// è·å–å½“å‰æè´¨æ’æ§½çš„æ•°é‡ 
+	int32 MaterialSlotIndex0 = GetMesh()->GetMaterialIndex("18 - Default");//ä¸‹åŠèº«
+	int32 MaterialSlotIndex1 = GetMesh()->GetMaterialIndex("12 - Default");//ä¸ŠåŠèº«
 
-	if (IsLocallyControlled())//Èç¹ûÊÇ±¾»ú¾Í±¾µØÉèÎªÍ¸Ã÷£¬µ«ÏÂÃæµÄClient»¹ÊÇÕı³£
+	if (IsLocallyControlled())//å¦‚æœæ˜¯æœ¬æœºå°±æœ¬åœ°è®¾ä¸ºé€æ˜ï¼Œä½†ä¸‹é¢çš„Clientè¿˜æ˜¯æ­£å¸¸
 	{
 		GetMesh()->SetMaterial(MaterialSlotIndex0, TransparentMaterial);
 		GetMesh()->SetMaterial(MaterialSlotIndex1, TransparentMaterial);
 	}
 	else
 	{
-		// ÉèÖÃÎªÕı³£µÄ²ÄÖÊ
+		// è®¾ç½®ä¸ºæ­£å¸¸çš„æè´¨
 		GetMesh()->SetMaterial(MaterialSlotIndex0, NormalMaterialDown);
 		GetMesh()->SetMaterial(MaterialSlotIndex1, NormalMaterialUp);
 	}
@@ -441,10 +449,10 @@ void ABlasterCharacter::ServerSetMaterial_Implementation()
 
 void ABlasterCharacter::SetOverlappingWeapon(AWeapon* Weapon)
 {
-	OverlappingWeapon = Weapon;//Èç¹ûÊÇ¿Í»§¶Ë£¬²»»áÖ´ĞĞÕâ¸öº¯Êı£¬ÒòÎªÊÇÎŞÖ÷µÄweaponµ÷ÓÃµÄÕâ¸öº¯Êı£¬¿Í»§¶Ë´¥·¢Åö×²ºó»áÔÚ·şÎñ¶ËÖ´ĞĞ£¬È»ºóOnRep»á°ÑOverlappingWeapon´«µ½ÆäËû¿Í»§¶ËÈ¥£¬ÓÖÒòÎª±»¶¨ÒåÎªCOND_OwnerOnly£¬ËùÒÔÖ»ÓĞOwner¶ÔÓ¦µÄ¿Í»§¶ËÄÃµ½ÁËÖµ£¬OnRepÓÉ·şÎñ¶Ëµ÷ÓÃ£¬²»ÔÚ·şÎñ¶ËÖ´ĞĞÖ»ÔÚ¿Í»§¶ËÖ´ĞĞ£¬ËùÒÔServer²»»á´¥·¢OnRepº¯Êı
-	//ÒòÎªServer²»»á´¥·¢OnRepº¯Êı£¬ËùÒÔÈôÊÇServerµÄÍæ¼Ò´¥·¢µÄÅö×²£¬Í¨¹ıÏÂÃæµÄ·½·¨½øĞĞÏÔÊ¾¡£
-	//Ö»ÓĞServerÉÏµÄ±¾µØÍæ¼ÒÖ´ĞĞ£¬¼ÓÉÏº¯Êı±¾ÉíÊÇÓÉÔÚ·şÎñ¶ËAWeapon::OnSphereOverlapµ÷ÓÃµÄ
-	if(IsLocallyControlled())//Returns true if controlled by a local (not network) Controller.Êµ²â×¢ÊÍÕâ¸öº¯ÊıÃ»ÓĞÓ°Ïì£¬ÒòÎªµ÷ÓÃÕâ¸öº¯ÊıµÄ¶ÔÏóµÄÌØÊâĞÔÈ·±£ÁË´úÂëÔËĞĞµ½ÕâµÄÊ±ºòÖ»¿ÉÄÜÊÇ·şÎñ¶ËÔÚÔËĞĞ£¬¿Í»§¶ËÑ¹¸ù²»»áµ÷ÓÃÕâ¸öº¯Êı£¬ÕâÀï²ÎÕÕ½Ì³Ì±£ÁôÕâ¸öº¯Êı¡£ÌØÊâĞÔÎª£¬ÎäÆ÷ÊÇÎŞÖ÷µÄ£¬ÎŞÖ÷µÄ¶¼¹éserver
+	OverlappingWeapon = Weapon;//å¦‚æœæ˜¯å®¢æˆ·ç«¯ï¼Œä¸ä¼šæ‰§è¡Œè¿™ä¸ªå‡½æ•°ï¼Œå› ä¸ºæ˜¯æ— ä¸»çš„weaponè°ƒç”¨çš„è¿™ä¸ªå‡½æ•°ï¼Œå®¢æˆ·ç«¯è§¦å‘ç¢°æ’åä¼šåœ¨æœåŠ¡ç«¯æ‰§è¡Œï¼Œç„¶åOnRepä¼šæŠŠOverlappingWeaponä¼ åˆ°å…¶ä»–å®¢æˆ·ç«¯å»ï¼Œåˆå› ä¸ºè¢«å®šä¹‰ä¸ºCOND_OwnerOnlyï¼Œæ‰€ä»¥åªæœ‰Ownerå¯¹åº”çš„å®¢æˆ·ç«¯æ‹¿åˆ°äº†å€¼ï¼ŒOnRepç”±æœåŠ¡ç«¯è°ƒç”¨ï¼Œä¸åœ¨æœåŠ¡ç«¯æ‰§è¡Œåªåœ¨å®¢æˆ·ç«¯æ‰§è¡Œï¼Œæ‰€ä»¥Serverä¸ä¼šè§¦å‘OnRepå‡½æ•°
+	//å› ä¸ºServerä¸ä¼šè§¦å‘OnRepå‡½æ•°ï¼Œæ‰€ä»¥è‹¥æ˜¯Serverçš„ç©å®¶è§¦å‘çš„ç¢°æ’ï¼Œé€šè¿‡ä¸‹é¢çš„æ–¹æ³•è¿›è¡Œæ˜¾ç¤ºã€‚
+	//åªæœ‰Serverä¸Šçš„æœ¬åœ°ç©å®¶æ‰§è¡Œï¼ŒåŠ ä¸Šå‡½æ•°æœ¬èº«æ˜¯ç”±åœ¨æœåŠ¡ç«¯AWeapon::OnSphereOverlapè°ƒç”¨çš„
+	if(IsLocallyControlled())//Returns true if controlled by a local (not network) Controller.å®æµ‹æ³¨é‡Šè¿™ä¸ªå‡½æ•°æ²¡æœ‰å½±å“ï¼Œå› ä¸ºè°ƒç”¨è¿™ä¸ªå‡½æ•°çš„å¯¹è±¡çš„ç‰¹æ®Šæ€§ç¡®ä¿äº†ä»£ç è¿è¡Œåˆ°è¿™çš„æ—¶å€™åªå¯èƒ½æ˜¯æœåŠ¡ç«¯åœ¨è¿è¡Œï¼Œå®¢æˆ·ç«¯å‹æ ¹ä¸ä¼šè°ƒç”¨è¿™ä¸ªå‡½æ•°ï¼Œè¿™é‡Œå‚ç…§æ•™ç¨‹ä¿ç•™è¿™ä¸ªå‡½æ•°ã€‚ç‰¹æ®Šæ€§ä¸ºï¼Œæ­¦å™¨æ˜¯æ— ä¸»çš„ï¼Œæ— ä¸»çš„éƒ½å½’server
 	{
 		if (OverlappingWeapon)
 		{
@@ -469,6 +477,47 @@ void ABlasterCharacter::OnRep_OverlappingWeapon(AWeapon* LastWeapon)
 
 #pragma endregion ShowOrHidePickupWidget
 
+void ABlasterCharacter::AimOffset(float DeltaTime)
+{
+	if(CombatComp && CombatComp->EquippedWeapon == nullptr) return;//å¦‚æœæ²¡è¿™ä¸ªç»„ä»¶æˆ–è€…æ‰‹ä¸Šæ²¡æ­¦å™¨ æ˜¯ä¸éœ€è¦æ‰§è¡Œè¿™ä¸ªå‡½æ•°çš„
+	AO_Pitch = GetBaseAimRotation().Pitch;//æ§åˆ¶æŒæªåŠ¨ç”»çš„ä¸Šä¸‹ï¼Œä¸ç®¡æ˜¯ç¬¬ä¸€äººç§°è¿˜æ˜¯ç¬¬ä¸‰äººç§°éƒ½éœ€è¦
+	if(AO_Pitch > 90.f && !IsLocallyControlled())//åœ¨ç½‘ç»œä¼ è¾“è¿‡ç¨‹ä¸­ï¼ŒPitchä¼šä»floatå‹ç¼©æˆunsignedè¿›è¡Œä¼ è¾“ä»è€Œä¸¢å¤±æ­£è´Ÿï¼Œéœ€è¦è¿›è¡Œè½¬æ¢
+	{
+		//å°†AO_Pitchä»[270,360)æ˜ å°„åˆ°[-90,0];
+		FVector2D InRange(270.f,360.f);
+		FVector2d OutRange(-90.f,0.f);
+		AO_Pitch = FMath::GetMappedRangeValueClamped(InRange,OutRange,AO_Pitch);
+	}
+	if(IsFirstPerson())//ç¬¬ä¸€äººç§°æªåœ¨æ‰‹ï¼ŒYawéšé¼ æ ‡èµ°
+	{
+		bUseControllerRotationYaw = true;
+		StartingAimRotation = FRotator(0.f, GetBaseAimRotation().Yaw, 0.f);
+		AO_Yaw = 0;
+		return;
+		//æ— éœ€å¤„ç†åé¢çš„
+	}
+	//å¤„ç†ç¬¬ä¸‰äººç§°ä¸‹çš„åç§»
+	 FVector Velocity = GetVelocity();
+	Velocity.Z = 0.f;
+	//è®¾ç½®é€Ÿåº¦
+	 float Speed = Velocity.Size();
+	//æ˜¯å¦åœ¨ç©ºä¸­
+	 bool bIsInAir = GetCharacterMovement()->IsFalling();
+
+	if(Speed == 0.f && !bIsInAir)//é™æ­¢çŠ¶æ€æ²¡æœ‰è·³è·ƒ
+	{
+		 FRotator CurrentAimRotation = FRotator(0.f, GetBaseAimRotation().Yaw, 0.f);
+		 FRotator DeltaAimRotation = UKismetMathLibrary::NormalizedDeltaRotator(CurrentAimRotation,StartingAimRotation);
+		AO_Yaw = DeltaAimRotation.Yaw;
+		bUseControllerRotationYaw = false;
+	}
+	if(Speed >0.f || bIsInAir)//å¥”è·‘æˆ–è€…è·³è·ƒ
+	{
+		StartingAimRotation = FRotator(0.f, GetBaseAimRotation().Yaw, 0.f);
+		bUseControllerRotationYaw = true;
+	}
+}
+
 bool ABlasterCharacter::IsWeaponEquipped()
 {
 	return (CombatComp && CombatComp->EquippedWeapon);
@@ -484,11 +533,17 @@ bool ABlasterCharacter::IsFirstPerson()
 	return FollowCamera->IsActive();
 }
 
+AWeapon* ABlasterCharacter::GetEquippedWeapon()
+{
+	if (CombatComp == nullptr) return nullptr;
+	return CombatComp->EquippedWeapon;
+}
+
 
 void ABlasterCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
-	//Ê¹ÓÃ¿ØÖÆÆ÷¿ØÖÆĞı×ªpitchºÍyaw
+	//ä½¿ç”¨æ§åˆ¶å™¨æ§åˆ¶æ—‹è½¬pitchå’Œyaw
 	//bUseControllerRotationPitch = true;
 	//bUseControllerRotationYaw = true;
 
@@ -497,7 +552,7 @@ void ABlasterCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PC->GetLocalPlayer()))
 		{
 
-			//ÏÈÇå³ıÓ³Éä±ÜÃâÖØ¸´Ìí¼Ó
+			//å…ˆæ¸…é™¤æ˜ å°„é¿å…é‡å¤æ·»åŠ 
 			Subsystem->ClearAllMappings();
 			Subsystem->AddMappingContext(IMC_Action, 0);
 			Subsystem->AddMappingContext(IMC_MoveBase, 0);
@@ -509,48 +564,48 @@ void ABlasterCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 	if (EnhancedInputComponent)
 	{
 
-		//ÒÆ¶¯
+		//ç§»åŠ¨
 		EnhancedInputComponent->BindAction(IA_MoveForward, ETriggerEvent::Triggered, this, &ABlasterCharacter::MoveForward);
 		EnhancedInputComponent->BindAction(IA_MoveRight, ETriggerEvent::Triggered, this, &ABlasterCharacter::MoveRight);
-		//Ğı×ª
+		//æ—‹è½¬
 		EnhancedInputComponent->BindAction(IA_LookRightRate, ETriggerEvent::Triggered, this, &ABlasterCharacter::LookRightRate);
 		EnhancedInputComponent->BindAction(IA_LookUpRate, ETriggerEvent::Triggered, this, &ABlasterCharacter::LookUpRate);
-		//ÌøÔ¾
+		//è·³è·ƒ
 		EnhancedInputComponent->BindAction(IA_Jump, ETriggerEvent::Started, this, &ABlasterCharacter::OnJump);
 
 		EnhancedInputComponent->BindAction(IA_Jump, ETriggerEvent::Completed, this, &ABlasterCharacter::OnJumpStoping);
 
-		//Éä»÷
+		//å°„å‡»
 		EnhancedInputComponent->BindAction(IA_FirePressed, ETriggerEvent::Triggered, this, &ABlasterCharacter::FirePressed);
 
 		EnhancedInputComponent->BindAction(IA_FireReleased, ETriggerEvent::Triggered, this, &ABlasterCharacter::FireReleased);
 
-		//ÓÒ¼üÃé×¼
+		//å³é”®ç„å‡†
 		EnhancedInputComponent->BindAction(IA_AimingPressed, ETriggerEvent::Triggered, this, &ABlasterCharacter::InputAimingPressed);
 
 		EnhancedInputComponent->BindAction(IA_AimingReleased, ETriggerEvent::Triggered, this, &ABlasterCharacter::InputAimingReleased);
-		//shift¾²²½	
+		//shiftå¥”è·‘
 		EnhancedInputComponent->BindAction(IA_ShiftPressed, ETriggerEvent::Triggered, this, &ABlasterCharacter::RunSpeedWalk);
 
 		EnhancedInputComponent->BindAction(IA_ShiftReleased, ETriggerEvent::Triggered, this, &ABlasterCharacter::NormalSpeedWalk);
 
-		//°´ÏÂCtrlÏÂ¶×
+		//æŒ‰ä¸‹Ctrlä¸‹è¹²
 		EnhancedInputComponent->BindAction(IA_CrouchPressed, ETriggerEvent::Triggered, this, &ABlasterCharacter::CrouchButtonPressed);
 
-		//°´G¶ªÆúÎäÆ÷
+		//æŒ‰Gä¸¢å¼ƒæ­¦å™¨
 		EnhancedInputComponent->BindAction(IA_DropWeapon, ETriggerEvent::Triggered, this, &ABlasterCharacter::InputDropWeapon);
 
-		//°´RÎäÆ÷»»µ¯
+		//æŒ‰Ræ­¦å™¨æ¢å¼¹
 		EnhancedInputComponent->BindAction(IA_Reload, ETriggerEvent::Triggered, this, &ABlasterCharacter::InputReload);
 
-		//°´VÇĞ»»ÊÓ½Ç
+		//æŒ‰Våˆ‡æ¢è§†è§’
 		EnhancedInputComponent->BindAction(IA_ChangeView, ETriggerEvent::Triggered, this, &ABlasterCharacter::InputShiftView);
 
-		//°´FÊ°È¡ÎäÆ÷
+		//æŒ‰Fæ‹¾å–æ­¦å™¨
 		EnhancedInputComponent->BindAction(IA_Equip, ETriggerEvent::Triggered, this, &ABlasterCharacter::EquipButtonPressed);
 
 		
-		// Äã¿ÉÒÔÍ¨¹ı¸ü¸Ä"ETriggerEvent"Ã¶¾ÙÖµ£¬°ó¶¨µ½´Ë´¦µÄÈÎÒâ´¥·¢Æ÷ÊÂ¼ş
+		// ä½ å¯ä»¥é€šè¿‡æ›´æ”¹"ETriggerEvent"æšä¸¾å€¼ï¼Œç»‘å®šåˆ°æ­¤å¤„çš„ä»»æ„è§¦å‘å™¨äº‹ä»¶
 		//Input->BindAction(AimingInputAction, ETriggerEvent::Triggered, this, &AFPSBaseCharacter::SomeCallbackFunc);
 
 	}

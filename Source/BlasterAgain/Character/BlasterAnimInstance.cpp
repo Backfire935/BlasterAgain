@@ -4,7 +4,9 @@
 #include "BlasterAnimInstance.h"
 #include"GameFramework/CharacterMovementComponent.h"
 #include "BlasterCharacter.h"
+#include "BlasterAgain/Weapon/Weapon.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "Net/UnrealNetwork.h"
 
 void UBlasterAnimInstance::NativeInitializeAnimation()
 {
@@ -35,7 +37,11 @@ void UBlasterAnimInstance::NativeUpdateAnimation(float DeltaTime)
 	bIsAccelerating = BlasterCharacter->GetCharacterMovement()->GetCurrentAcceleration().Size() > 0.f ? true : false;
 	//是否装备武器
 	bWeaponEquipped = BlasterCharacter->IsWeaponEquipped();
+	//装备的武器
+	EquippedWeapon = BlasterCharacter->GetEquippedWeapon();
+	//是否在下蹲
 	bIsCrouched = BlasterCharacter->bIsCrouched;
+	//是否在瞄准
 	bAiming = BlasterCharacter->IsAiming();
 
 	//角色扫射状态身体的Yaw偏移
@@ -53,4 +59,18 @@ void UBlasterAnimInstance::NativeUpdateAnimation(float DeltaTime)
 
 	const float Interp = FMath::FInterpTo(Lean, Target, DeltaTime, 6.f);
 	Lean = FMath::Clamp(Interp, -90.f, 90.f);
+	AO_Yaw = BlasterCharacter->GetAO_Yaw();
+	AO_Pitch = BlasterCharacter->GetAO_Pitch();
+
+	if (bWeaponEquipped && EquippedWeapon && EquippedWeapon->GetWeaponMesh() && BlasterCharacter->GetMesh())
+	{
+		LeftHandTransform = EquippedWeapon->GetWeaponMesh()->GetSocketTransform(FName("LeftHandSocket"), ERelativeTransformSpace::RTS_World);//获取武器插槽的三维信息
+		FVector OutPosition;
+		FRotator OutRotation;
+		BlasterCharacter->GetMesh()->TransformToBoneSpace(FName("hand_r"), LeftHandTransform.GetLocation(), FRotator::ZeroRotator, OutPosition, OutRotation);
+		LeftHandTransform.SetLocation(OutPosition);
+		LeftHandTransform.SetRotation(FQuat(OutRotation));//参数类型是const TQuat<T>& NewRotation 所以需要用using FQuat = UE::Math::TQuat<double>;
+	}
 }
+
+
