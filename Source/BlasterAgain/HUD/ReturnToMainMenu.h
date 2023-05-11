@@ -38,4 +38,5 @@ private:
 
 	UPROPERTY()
 	class APlayerController* PlayerController;
+
 };

@@ -150,10 +150,9 @@ private:
 	
 protected:
 
-	virtual void BeginPlay() override;
+	
 
 public:	
-
 	virtual void BeginPlay() override;
 
 	void SaveFramePackage(FFramePackage & Package);

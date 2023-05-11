@@ -1,11 +1,15 @@
 
 #include "Weapon.h"
 
+#include "WeaponTypes.h"
+#include "BlasterAgain/BlasterComponent/CombatComponent.h"
 #include "BlasterAgain/Character/BlasterCharacter.h"
+#include "BlasterAgain/PlayerController/BlasterPlayerController.h"
 #include "Components/SphereComponent.h"
 #include "Components/WidgetComponent.h"
 #include "Engine/SkeletalMeshSocket.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Kismet/KismetMathLibrary.h"
 #include "Net/UnrealNetwork.h"
 #include "PhysicalMaterials/PhysicalMaterial.h"
 
@@ -38,6 +42,14 @@ AWeapon::AWeapon()
 }
 
 
+void AWeapon::EnableCustomDepth(bool bEnable)
+{
+	if(WeaponMesh)
+	{
+		WeaponMesh->SetRenderCustomDepth(bEnable);//¿ªÆôÎäÆ÷µÄäÖÈ¾×Ô¶¨ÒåÉî¶È
+	}
+}
+
 void AWeapon::BeginPlay()
 {
 	Super::BeginPlay();
@@ -55,6 +67,66 @@ void AWeapon::BeginPlay()
 	}
 }
 
+
+
+void AWeapon::HandleWeaponEquiped()
+{
+	ShowPickupWidget(false);//¹Ø±ÕÎäÆ÷µÄÊ°È¡ÌáÊ¾
+	AreaSphere->SetCollisionEnabled(ECollisionEnabled::NoCollision);//¹Ø±ÕÎäÆ÷µÄÅö×²ºĞ×Ó
+	WeaponMesh->SetSimulatePhysics(false);//¿ªÆôÄ£ÄâÎïÀí
+	WeaponMesh->SetEnableGravity(false);//¿ªÆôÎäÆ÷ÖØÁ¦
+	WeaponMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	if (WeaponType == EWeaponType::EWT_SMG)//¿ªÆôÇ¹´øµÄÄ£ÄâÎïÀí
+		{
+		WeaponMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+		WeaponMesh->SetEnableGravity(true);//¿ªÆôÎäÆ÷ÖØÁ¦
+		WeaponMesh->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
+		}
+	EnableCustomDepth(false);//¹Ø±ÕÎäÆ÷ÂÖÀªÃè±ß
+
+	BlasterOwnerCharacter = BlasterOwnerCharacter == nullptr ? Cast<ABlasterCharacter>(GetOwner()) : BlasterOwnerCharacter;
+	if (BlasterOwnerCharacter && bUseServerSideRewind)
+	{
+		BlasterOwnerController = BlasterOwnerController == nullptr ? Cast<ABlasterPlayerController>(BlasterOwnerCharacter->Controller) : BlasterOwnerController;
+		if (BlasterOwnerController && HasAuthority() && !BlasterOwnerController->HighPingDelegate.IsBound())
+		{
+			BlasterOwnerController->HighPingDelegate.AddDynamic(this, &AWeapon::OnPingTooHigh);
+		}
+	}
+}
+
+void AWeapon::HandleWeaponSecondary()
+{
+	ShowPickupWidget(false);//¹Ø±ÕÎäÆ÷µÄÊ°È¡ÌáÊ¾
+	AreaSphere->SetCollisionEnabled(ECollisionEnabled::NoCollision);//¹Ø±ÕÎäÆ÷µÄÅö×²ºĞ×Ó
+	WeaponMesh->SetSimulatePhysics(false);//¿ªÆôÄ£ÄâÎïÀí
+	WeaponMesh->SetEnableGravity(false);//¿ªÆôÎäÆ÷ÖØÁ¦
+	WeaponMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	if (WeaponType == EWeaponType::EWT_SMG)//¿ªÆôÇ¹´øµÄÄ£ÄâÎïÀí
+		{
+		WeaponMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+		WeaponMesh->SetEnableGravity(true);//¿ªÆôÎäÆ÷ÖØÁ¦
+		WeaponMesh->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
+		}
+	EnableCustomDepth(true);//¹Ø±ÕÎäÆ÷ÂÖÀªÃè±ß
+	if (WeaponMesh)
+	{
+		WeaponMesh->SetCustomDepthStencilValue(CUSTOM_DEPTH_TAN);
+		WeaponMesh->MarkRenderStateDirty();//ÓÃÀ´±ê¼Çµ±Ç°µÄäÖÈ¾×´Ì¬ÎªÒÑäÖÈ¾
+	}
+	BlasterOwnerCharacter = BlasterOwnerCharacter == nullptr ? Cast<ABlasterCharacter>(GetOwner()) : BlasterOwnerCharacter;
+
+	if (BlasterOwnerCharacter)
+	{
+		BlasterOwnerController = BlasterOwnerController == nullptr ? Cast<ABlasterPlayerController>(BlasterOwnerCharacter->Controller) : BlasterOwnerController;
+		if (BlasterOwnerController && HasAuthority() && BlasterOwnerController->HighPingDelegate.IsBound())
+		{
+			BlasterOwnerController->HighPingDelegate.RemoveDynamic(this, &AWeapon::OnPingTooHigh);
+		}
+	}
+}
+
+
 void AWeapon::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
@@ -67,17 +139,25 @@ void AWeapon::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeP
 	DOREPLIFETIME(AWeapon, WeaponState);
 }
 
+void AWeapon::OnPingTooHigh(bool bPingTooHigh)
+{
+	bUseServerSideRewind = !bPingTooHigh;
+}
+
 #pragma region WeaponState
+
+
 void AWeapon::OnRep_WeaponState()//´¦ÀíÎäÆ÷²»Í¬×´Ì¬Ê±¿Í»§¶ËÎäÆ÷µÄÎïÀíĞ§¹û
 {
 	ABlasterCharacter* BlasterCharacter = Cast<ABlasterCharacter>(GetOwner());
+	FDetachmentTransformRules DetachRules(EDetachmentRule::KeepWorld, true);//Õâ¸ö±äÁ¿ÊÇ½â°ó×é¼şµÄ¹æÔò£¬²ÎÊıÒâË¼ÊÇ×Ô¶¯¼ÆËãÏà¶Ô×ª»»£¬ÒÔ±ã·ÖÀë×é¼şÎ¬»¤ÏàÍ¬µÄÊÀ½ç×ª»»¡£
 	const USkeletalMeshSocket* HandSocket = BlasterCharacter ? BlasterCharacter->GetMesh()->GetSocketByName(FName("RightHandSocket")) : nullptr;
 	switch (WeaponState)
 	{
-	case EWeaponState::EWS_Initial:
+	case EWeaponState::Weapon_Initial:
 		ShowPickupWidget(false);
 		break;
-	case  EWeaponState::EWS_Equipped :
+	case  EWeaponState::Weapon_Equipped :
 		ShowPickupWidget(false);
 		//¹Ø±ÕÄ£ÄâÎïÀí
 		WeaponMesh->SetSimulatePhysics(false);
@@ -89,9 +169,8 @@ void AWeapon::OnRep_WeaponState()//´¦ÀíÎäÆ÷²»Í¬×´Ì¬Ê±¿Í»§¶ËÎäÆ÷µÄÎïÀíĞ§¹û
 			HandSocket->AttachActor(this, BlasterCharacter->GetMesh()); //ÔÚ²å²ÛÉÏ½«ÎäÆ÷¸½¼Óµ½ÉíÌåÉÏ
 		}
 		break;
-	case EWeaponState::EWS_Dropped :
+	case EWeaponState::Weapon_Dropped :
 		ShowPickupWidget(false);
-		FDetachmentTransformRules DetachRules(EDetachmentRule::KeepWorld, true);//Õâ¸ö±äÁ¿ÊÇ½â°ó×é¼şµÄ¹æÔò£¬²ÎÊıÒâË¼ÊÇ×Ô¶¯¼ÆËãÏà¶Ô×ª»»£¬ÒÔ±ã·ÖÀë×é¼şÎ¬»¤ÏàÍ¬µÄÊÀ½ç×ª»»¡£
 		WeaponMesh->DetachFromComponent(DetachRules);//²»ÂÛ×é¼ş±»¸½¼Óµ½Ê²Ã´ÉÏÃæ¶¼»á²ğÏÂÀ´£¬×Ô¶¯½â°ó±»°óÔÚÒ»ÆğµÄ×é¼ş
 		//¿ªÆôÄ£ÄâÎïÀí
 		WeaponMesh->SetSimulatePhysics(true);
@@ -100,7 +179,48 @@ void AWeapon::OnRep_WeaponState()//´¦ÀíÎäÆ÷²»Í¬×´Ì¬Ê±¿Í»§¶ËÎäÆ÷µÄÎïÀíĞ§¹û
 		WeaponMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics); // ÆôÓÃÅö×²¼ì²âºÍÎïÀíÄ£Äâ
 		//¿ªÆôÖØÁ¦
 		WeaponMesh->SetEnableGravity(true);
+	
+	case EWeaponState::Weapon_EquippedSecondary :
+		{
+			HandleWeaponSecondary();
+			break;
+		}
 		break;
+	}
+}
+
+void AWeapon::ClientAddAmmo_Implementation(int32 AmmoToAdd)
+{
+	if (HasAuthority()) return;
+	Ammo = FMath::Clamp(Ammo + AmmoToAdd, 0, MagCapacity);
+	BlasterOwnerCharacter = BlasterOwnerCharacter == nullptr ? Cast<ABlasterCharacter>(GetOwner()) : BlasterOwnerCharacter;
+	if (BlasterOwnerCharacter && BlasterOwnerCharacter->GetCombat() && IsFull())
+	{
+		BlasterOwnerCharacter->GetCombat()->JumpToShotGunEnd();
+	}
+
+}
+
+void AWeapon::ClientUpdateAmmo_Implementation(int32 ServerAmmo)
+{
+	if (HasAuthority()) return;
+	Ammo = ServerAmmo;
+	--Sequence;
+	Ammo -= Sequence;
+	SetHUDAmmo();
+}
+
+void AWeapon::SpendRound()
+{
+	Ammo = FMath::Clamp(Ammo - 1 , 0 , MagCapacity);//ÈÃammoÏŞÖÆÔÚ0µ½×î´ó±¸µ¯ÊıÖ®¼ä
+	SetHUDAmmo();
+	if(HasAuthority())
+	{
+		ClientUpdateAmmo(Ammo);
+	}
+	else  
+	{
+		++Sequence;
 	}
 }
 
@@ -110,19 +230,29 @@ void AWeapon::SetWeaponState(EWeaponState State)
 
 	switch (WeaponState)
 	{
-	case EWeaponState::EWS_Initial:
+	case EWeaponState::Weapon_Initial:
 		ShowPickupWidget(false);
 		AreaSphere->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 		break;
-	case  EWeaponState::EWS_Equipped:
+	case  EWeaponState::Weapon_Equipped:
 		ShowPickupWidget(false);
 		AreaSphere->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 		break;
-	case EWeaponState::EWS_Dropped:
+	case EWeaponState::Weapon_Dropped:
 		ShowPickupWidget(false);
 		AreaSphere->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 		break;
 	}
+}
+
+bool AWeapon::IsEmpty()//ÅĞ¶Ï×Óµ¯ÊÇ·ñ´òÍê
+{
+	return Ammo <= 0;
+}
+
+bool AWeapon::IsFull()
+{
+	return Ammo == MagCapacity;//µ±Ç°Ê£Óà×Óµ¯ÊıÁ¿ÊÇ²»ÊÇµÈÓÚµ¯¼ĞÈİÁ¿
 }
 
 void AWeapon::ServerDropWeapon_Implementation()//Õâ¸öÓÃÀ´´¦ÀíServer¶ËÎäÆ÷µÄµôÂäĞ§¹û£¬¿Í»§¶ËµÄĞ§¹ûÓÉWeaponState´¥·¢µÄOnRep_WeaponStateÍê³É
@@ -141,8 +271,121 @@ void AWeapon::ServerDropWeapon_Implementation()//Õâ¸öÓÃÀ´´¦ÀíServer¶ËÎäÆ÷µÄµôÂäĞ
 
 void AWeapon::Dropped()
 {
-	SetWeaponState(EWeaponState::EWS_Dropped);//ÏÈ½«´Ë¼şÎäÆ÷µÄ×´Ì¬µÄÉèÎª¶ªÆú×´Ì¬
+	SetWeaponState(EWeaponState::Weapon_Dropped);//ÏÈ½«´Ë¼şÎäÆ÷µÄ×´Ì¬µÄÉèÎª¶ªÆú×´Ì¬
 	ServerDropWeapon();
+}
+
+void AWeapon::OnRep_Owner()
+{
+	Super::OnRep_Owner();
+	if (Owner == nullptr)
+	{
+		BlasterOwnerCharacter = nullptr;
+		BlasterOwnerController = nullptr;
+	}
+	else
+	{
+		BlasterOwnerCharacter = BlasterOwnerCharacter == nullptr ? Cast<ABlasterCharacter>(Owner) : BlasterOwnerCharacter;
+		if(BlasterOwnerCharacter && BlasterOwnerCharacter->GetEquippedWeapon() && BlasterOwnerCharacter->GetEquippedWeapon() == this)
+		{//È·±£Ä¿Ç°ÓÃµÄµ¯Ò©HUDÊÇÊÖÉÏÄÃµÄÎäÆ÷µÄµ¯Ò©HUD¶ø²»ÊÇ±³ÉÏ±³µÄ
+			SetHUDAmmo();
+		}
+	}
+}
+
+void AWeapon::SetHUDAmmo()
+{
+	BlasterOwnerCharacter = BlasterOwnerCharacter == nullptr ? Cast<ABlasterCharacter>(GetOwner()) : BlasterOwnerCharacter;
+	if (BlasterOwnerCharacter)
+	{
+		BlasterOwnerController = BlasterOwnerController == nullptr ? Cast<ABlasterPlayerController>(BlasterOwnerCharacter->Controller) : BlasterOwnerController;
+		if (BlasterOwnerController)
+		{
+			BlasterOwnerController->SetHUDWeaponAmmo(Ammo);
+		}
+	}
+}
+
+void AWeapon::Fire(const FVector& HitTarget)
+{
+	//ÎäÆ÷²úÉú¿ª»ğµÄĞ§¹û
+	if (FireAnimation)//Èç¹û¿ª»ğ¶¯»­´æÔÚµÄ»°,ÓÉÎäÆ÷Ä£ĞÍ²¥·ÅÕâ¸ö¿ª»ğ¶¯»­
+		{
+		WeaponMesh->PlayAnimation(FireAnimation, false);//µÚ¶ş¸ö²ÎÊıÊÇÑ­»·²¥·ÅµÄ²ÎÊı£¬ÉèÖÃÎªfalse
+		}
+
+	//ÎäÆ÷Éú³É²¢Å×³ö×Óµ¯¿Ç
+	if (BulletShells)//Èç¹û×Óµ¯¿ÇÀàÊÇ´æÔÚµÄ»°
+		{
+		const USkeletalMeshSocket* AmmoEjectSocket = WeaponMesh->GetSocketByName(FName("AmmoEject"));//»ñÈ¡ÎäÆ÷Ç¹¿ÚµÄ²å²Û
+		if (AmmoEjectSocket)//Ç¹¿Ú²å²ÛµÄÎ»ÖÃ
+			{
+			FTransform SocketTransform = AmmoEjectSocket->GetSocketTransform(GetWeaponMesh());//»ñÈ¡µ±Ç°ÊÖÉÏµÄÎäÆ÷µÄÇ¹¿Ú²å²ÛµÄÎ»ÖÃºÍĞı×ªĞÅÏ¢£¬Õâ¾ÍÊÇ×Óµ¯¿ÇÅ×³öµÄ·½Ïò£¬¾ßÌåĞèÒªÔÚÇ¹ĞµµÄ¹Ç÷ÀÖĞÉèÖÃ²å²ÛÎ»ÖÃºÍĞı×ª½Ç¶È
+			UWorld* World = GetWorld();//»ñÈ¡ÊÀ½ç³¡¾°
+			if (World)
+			{
+				World->SpawnActor<ABulletShells>(//Ö±½ÓÔÚÊÀ½ç³¡¾°ÖĞÉú³É×Óµ¯¿Ç£¬ÏÂÃæÊÇ¾ßÌåÉèÖÃ
+					BulletShells,//Éú³ÉµÄÎïÌåÊÇ×Óµ¯¿Ç
+					SocketTransform.GetLocation(),//Éú³ÉµÄÎ»ÖÃÊÇÎäÆ÷²å²ÛµÄÎ»ÖÃ
+					SocketTransform.GetRotation().Rotator()	//Éú³ÉµÄĞı×ª½Ç¶ÈÊÇ²å²ÛµÄÈıÎ¬Ğı×ªĞÅÏ¢
+					);
+			}
+			}
+		}//×Óµ¯¿ÇÅ×³öĞ§¹û½áÊø
+
+	SpendRound();//´òÍêÁË¸üĞÂÏÂ×Óµ¯
+}
+
+FVector AWeapon::TraceWithScatter(const FVector& HitTarget)
+{
+	const USkeletalMeshSocket* MuzzleFlashSocket = GetWeaponMesh()->GetSocketByName("MuzzleFlash");
+
+	if (MuzzleFlashSocket == nullptr) return FVector();//Ò»¸öÖ±ÏßÎäÆ÷¹¥»÷¼ì²â
+
+	const FTransform SocketTransform = MuzzleFlashSocket->GetSocketTransform(GetWeaponMesh());
+	const FVector TraceStart = SocketTransform.GetLocation();//¿ª»ğ¼ì²âµÄÆğÊ¼µã
+
+	const FVector  ToTargetNormalized = (HitTarget - TraceStart).GetSafeNormal();//Ò»¸ö´ÓÉäÏßÆğÊ¼µãµ½±»»÷ÖĞÄ¿±êµÄÏòÁ¿
+	const FVector  SphereCenter = TraceStart + ToTargetNormalized * DistanceToSphere;//µ½Åç×ÓÉä³ÌÖÕµãµÄÖĞµãÏòÁ¿
+	const FVector  RandVec = UKismetMathLibrary::RandomUnitVector() * FMath::FRandRange(0.f, SphereRadius);//Ëæ»ú·½Ïòµ¥Î»ÏòÁ¿*Ëæ»ú³¤¶È 
+	const FVector EndLoc = SphereCenter + RandVec;//ÖĞĞÄµ½ËÄÖÜµÄËæ»úÀ©É¢ÏòÁ¿
+	const FVector ToEndLoc = EndLoc - TraceStart;//Á½µã¼äµÄÏß¶Î
+
+	FVector EndEnd = (TraceStart + ToEndLoc * TRACE_LENGTH / ToEndLoc.Size());//µ¥¸öÉäÏßÏòÁ¿
+
+	/*
+	 *DrawDebugSphere(GetWorld(), SphereCenter, SphereRadius, 12, FColor::Red, false, 10.f);//Õû¸öÉ¢ÉäÀ©É¢·¶Î§
+	DrawDebugSphere(GetWorld(), EndLoc, 4.F, 12, FColor::Blue, false,10.f);//µ¥¸öÅç×Ó×Óµ¯µÄÂäµã
+	DrawDebugLine(GetWorld(), TraceStart, EndEnd, FColor::Orange, false, 10.f);//µ¥¸öÅç×Ó×Óµ¯µÄÂäµã
+*/
+
+	return EndEnd;//µ¥¸öÉäÏßÏòÁ¿
+}
+
+void AWeapon::ReadyDestroyWeapon()
+{
+	GetWorldTimerManager().SetTimer(
+	DestroyWeaponTimer,
+	this,
+	&AWeapon::DestroyWeapon,
+	DestroyWeaponTime
+);
+}
+
+void AWeapon::DestroyWeapon()
+{
+	//Èç¹ûÖ®Ç°µÄÎäÆ÷±»¼ñÆğÀ´µÄ»°£¬ÄÇÃ´EquippedWeaponºÍStoryedToDestroyWeaponÖ¸ÕëÖ¸ÏòµÄÊÇÍ¬Ò»¸öÊµÀıÎäÆ÷
+	if (bDestroyedWeapon)//ÔÚÏú»ÙÇ°½øĞĞÒ»´Î¼ì²é£¬Èô´ËÊ±ÎäÆ÷ÒÑ¾­±»Ê°È¡ÆğÀ´£¬Ôò²»»áÏú»ÙÎäÆ÷
+		{
+			Destroy();
+		}
+}
+
+void AWeapon::AddAmmo(int32 AmmoToAdd)
+{
+	Ammo = FMath::Clamp(Ammo + AmmoToAdd, 0, MagCapacity);
+	SetHUDAmmo();
+	ClientAddAmmo(AmmoToAdd);
 }
 
 #pragma endregion WeaponState
@@ -175,7 +418,4 @@ void AWeapon::ShowPickupWidget(bool bShowWidget)
 		PickupWidget->SetVisibility(bShowWidget);
 	}
 }
-
-
-
 
