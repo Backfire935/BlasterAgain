@@ -18,6 +18,7 @@ public:
 	virtual void NativeInitializeAnimation() override;
 	virtual  void NativeUpdateAnimation(float DeltaTime) override;
 	
+	FORCEINLINE void SetbUseFABRIK(bool bUse)  { bUseFABRIK = bUse; }
 private:
 	UPROPERTY(BlueprintReadOnly, Category = "Character", meta = (AllowPrivateAccess = "true"))
 		class ABlasterCharacter* BlasterCharacter;
@@ -48,6 +49,11 @@ private:
 
 	UPROPERTY(BlueprintReadOnly, Category = Anim, meta = (AllowPrivateAccess = "true"))
 	float Lean;
+	
+	FRotator CharacterRotatorLastFrame;
+	FRotator CharacterRotator;
+	FRotator DeltaRotation;
+
 
 	UPROPERTY(BlueprintReadOnly, Category = Anim, meta = (AllowPrivateAccess = "true"))
 	float AO_Yaw;
@@ -58,8 +64,28 @@ private:
 	UPROPERTY(BlueprintReadOnly, Category = Movement, meta = (AllowPrivateAccess = "true"))
 	FTransform LeftHandTransform;
 
-	FRotator CharacterRotatorLastFrame;
-	FRotator CharacterRotator;
-	FRotator DeltaRotation;
+	UPROPERTY(BlueprintReadOnly, category = Movement, meta = (AllowPrivateAccess = "ture"))
+	FRotator RightHandRotation; 
+
+	UPROPERTY(BlueprintReadOnly, Category = Movement, meta = (AllowPrivateAccess = "true"))
+	bool bLocallyControlled;
+
+	UPROPERTY(BlueprintReadOnly, Category = Movement, meta = (AllowPrivateAccess = "true"))
+	bool bRotateRootBone;
+
+	UPROPERTY(BlueprintReadOnly, Category = Movement, meta = (AllowPrivateAccess = "true"))
+	bool bElimed;
+
+	UPROPERTY(BlueprintReadOnly, Category = Movement, meta = (AllowPrivateAccess = "true"))
+	bool bUseFABRIK	;
+
+	UPROPERTY(BlueprintReadOnly, Category = Movement, meta = (AllowPrivateAccess = "true"))
+	bool bUseAimOffsets;
+
+	UPROPERTY(BlueprintReadOnly, Category = Movement, meta = (AllowPrivateAccess = "true"))
+	bool bTransformRightHand;
+
+	UPROPERTY(BlueprintReadOnly, Category = Movement, meta = (AllowPrivateAccess = "true"))
+	bool bHoldingTheFlag;
 
 };

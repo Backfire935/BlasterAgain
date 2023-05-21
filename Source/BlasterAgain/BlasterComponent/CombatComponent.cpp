@@ -18,14 +18,27 @@
 
 UCombatComponent::UCombatComponent()
 {
-	PrimaryComponentTick.bCanEverTick = false;
+	PrimaryComponentTick.bCanEverTick = true;
 }
 
 
 void UCombatComponent::BeginPlay()
 {
 	Super::BeginPlay();
+	if (Character)
+	{
+		Character->GetCharacterMovement()->MaxWalkSpeed = BaseWalkSpeed;//控制速度
+		if (Character->GetFollowCamera())
+		{
+			DefaultFOV = Character->GetFollowCamera()->FieldOfView;//获取相机视野
+			CurrentFOV = DefaultFOV;
+		}
+		if (Character->HasAuthority())//控制备弹
+			{
+				InitializeCarriedAmmo();//初始化备弹
+			}
 	
+	}
 }
 
 #pragma region Aiming
@@ -90,7 +103,16 @@ void UCombatComponent::ServerSetAiming_Implementation(bool bIsAiming)
 void UCombatComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+	
 
+	if (Character && Character->IsLocallyControlled())
+	{
+		FHitResult HitResult;
+		TraceUnderCrosshairs(HitResult);
+		HitTarget = HitResult.ImpactPoint;
+		SetHUDCrosshairs(DeltaTime); 
+		InterpFOV(DeltaTime);
+	}
 }
 
 void UCombatComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -98,6 +120,14 @@ void UCombatComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Out
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(UCombatComponent, EquippedWeapon);
 	DOREPLIFETIME(UCombatComponent, bAiming);
+	DOREPLIFETIME(UCombatComponent, SecondaryWeapon);//注册第二把武器
+	DOREPLIFETIME(UCombatComponent, CombatState);
+
+	DOREPLIFETIME(UCombatComponent, Grenades);
+
+	DOREPLIFETIME_CONDITION(UCombatComponent, CarriedAmmo, COND_OwnerOnly); //注册本类中声明的int32类型的备弹量变量的网络同步
+
+	DOREPLIFETIME(UCombatComponent, bHoldingTheFlag);
 }
 
 void UCombatComponent::EquipWeapon(AWeapon* WeaponToEquip)
@@ -117,6 +147,8 @@ void UCombatComponent::EquipWeapon(AWeapon* WeaponToEquip)
 		HandSocket->AttachActor(EquippedWeapon, Character->GetMesh()); //在插槽上将武器附加到身体上
 	}
 	EquippedWeapon->SetOwner(Character);
+	UpdateAmmoValues();
+	UpdateCarriedAmmo();
 	//Character->GetCharacterMovement()->bOrientRotationToMovement = false;
 	//Character->bUseControllerRotationYaw = true;
 }
@@ -130,6 +162,7 @@ void UCombatComponent::DropWeapon()
 		EquippedWeapon->Dropped();//如果已经装备了一件武器，就丢掉手上的
 		EquippedWeapon->SetOwner(nullptr);//将拥有者设置为空
 		EquippedWeapon = nullptr;
+		
 	}
 }
 
@@ -145,6 +178,7 @@ void UCombatComponent::SwapPrimaryWeapon()
 	AttachActorToRightHand(EquippedWeapon);//东西放右手上
 	EquippedWeapon->SetOwner(Character);//设置所有权
 	EquippedWeapon->SetHUDAmmo();//设置当前弹药HUD
+	UpdateAmmoValues();
 	UpdateCarriedAmmo();//更新携带的弹药
 	PlayEquipWeaponSound(EquippedWeapon);//播放捡起武器的声音
 	ReloadEmptyWeapon();//武器要是空的就装子弹
@@ -177,6 +211,11 @@ void UCombatComponent::SwapSecondaryWeapon()
 
 void UCombatComponent::Reload()
 {
+	UE_LOG(LogTemp,Warning,TEXT("%d"),CarriedAmmo);
+	UE_LOG(LogTemp,Warning,TEXT("%d"),CombatState);
+	UE_LOG(LogTemp,Warning,TEXT("%d"),EquippedWeapon->IsFull());
+	UE_LOG(LogTemp,Warning,TEXT("%d"),bLocallyReloading);
+	
 	if (CarriedAmmo > 0 && CombatState != ECombatState::ECS_Reloading && !EquippedWeapon->IsFull() && !bLocallyReloading)//还有子弹且不是满弹且当前武器状态不处于换弹才能够换弹
 		{
 		ServerReload();
@@ -242,6 +281,20 @@ void UCombatComponent::LauncherGrenade()
 	}
 }
 
+void UCombatComponent::PickupAmmo(EWeaponType WeaponType, int32 AmmoAmount)
+{
+	if (CarriedAmmoMap.Contains(WeaponType))//确保是有这种武器类型的
+		{
+		CarriedAmmoMap[WeaponType] += AmmoAmount;//给指定的武器类型加备弹
+
+		UpdateCarriedAmmo();
+		}
+	if(EquippedWeapon && EquippedWeapon->IsEmpty() && EquippedWeapon->GetWeaponType() == WeaponType)
+	{
+		Reload();//如果武器没子弹了且此时捡到了子弹，自动装填
+	}
+}
+
 void UCombatComponent::ServerLuncherGrenade_Implementation(const FVector_NetQuantize& Target)
 {
 	if (Character  && GrenadeClass && Character->GetAttachedGrenade())
@@ -293,10 +346,21 @@ void UCombatComponent::OnRep_SecondaryWeapon()
 	}
 }
 
-void UCombatComponent::ServerFire_Implementation(const FVector_NetQuantize& TraceHitTarget)
+void UCombatComponent::ServerFire_Implementation(const FVector_NetQuantize& TraceHitTarget, float FireDelay)
 {
 	MultiCastFire(TraceHitTarget);//在服务器上执行多播会在服务器和所有的客户端上执行
 }
+
+bool UCombatComponent::ServerFire_Validate(const FVector_NetQuantize& TraceHitTarget, float FireDelay)
+{
+	if (EquippedWeapon)
+	{
+		bool bNearlyEqual = FMath::IsNearlyEqual(EquippedWeapon->FireDelay, FireDelay, 0.001f);
+		return bNearlyEqual;
+	}
+	return true;
+}
+
 
 void UCombatComponent::MultiCastFire_Implementation(const FVector_NetQuantize& TraceHitTarget)
 {
@@ -320,8 +384,7 @@ void UCombatComponent::TraceUnderCrosshairs(FHitResult& TraceHitResult)
 	FVector2D ViewportSize;
 	if (GEngine && GEngine->GameViewport)//从GEngine获取视口
 		{
-		GEngine->GameViewport->GetViewportSize(ViewportSize);//获取游戏屏幕的大小
-
+			GEngine->GameViewport->GetViewportSize(ViewportSize);//获取游戏屏幕的大小
 		}
 	FVector2D CrosshairLocation(ViewportSize.X / 2.0F, ViewportSize.Y / 2.0f);//屏幕大小除以二就是中心点的坐标,不过是屏幕坐标，不是世界坐标
 
@@ -335,7 +398,7 @@ void UCombatComponent::TraceUnderCrosshairs(FHitResult& TraceHitResult)
 		CrosshairWorldPosition,
 		CrosshairWorldDirection
 	);//运行后rosshairWorldPosition,CrosshairWorldDirection被填充数据
-
+	
 	if (bScreenToWorld)
 	{
 		FVector Start = CrosshairWorldPosition;//子弹射出去开始的位置
@@ -344,7 +407,7 @@ void UCombatComponent::TraceUnderCrosshairs(FHitResult& TraceHitResult)
 		{
 			float DistanceToCharacter = (Character->GetActorLocation() - Start).Size();
 			Start += CrosshairWorldDirection * (DistanceToCharacter + 100.f);
-			//DrawDebugSphere(GetWorld(), Start, 16.f, 12, FColor::Red, false);
+			DrawDebugSphere(GetWorld(), Start, 16.f, 12, FColor::Red, false);
 		}
 
 		FVector End = Start + CrosshairWorldDirection * TraceLength;//子弹射出去停止的位置，相当于最大射程
@@ -448,7 +511,6 @@ void UCombatComponent::HandleReload()
 	if(Character)
 	{
 		Character->PlayReloadMontage();
-
 	}
 }
 
@@ -739,7 +801,7 @@ void UCombatComponent::FireProjectileWeapon()
 	{
 		HitTarget = EquippedWeapon->bUseScatter ? EquippedWeapon->TraceWithScatter(HitTarget) : HitTarget;
 		if(!Character->HasAuthority()) LocalFire(HitTarget);//防止服务端调用两次，一次localfire，一次serverfire
-		ServerFire(HitTarget);
+		ServerFire(HitTarget,EquippedWeapon->FireDelay);
 	}
 
 }
@@ -750,7 +812,7 @@ void UCombatComponent::FireHitScanWeapon()
 	{
 		HitTarget = EquippedWeapon->bUseScatter ? EquippedWeapon->TraceWithScatter(HitTarget) : HitTarget;
 		if (!Character->HasAuthority()) LocalFire(HitTarget);//防止服务端调用两次，一次localfire，一次serverfire
-		ServerFire(HitTarget);
+		ServerFire(HitTarget,EquippedWeapon->FireDelay);
 	}
 }
 
@@ -772,9 +834,9 @@ void UCombatComponent::LocalFire(const FVector_NetQuantize& TraceHitTarget)
 
 	if (Character && CombatState == ECombatState::ECS_Unoccupied)//如果角色类存在，且武器状态是空闲状态的话
 		{
-		//开火需要播放两种动画，一种是角色的开火动作动画，还有一种是武器的动作动画
-		Character->PlayFireMontage(bAiming);//角色类播放开火蒙太奇动画
-		EquippedWeapon->Fire(TraceHitTarget);//武器类触发开火事件
+			//开火需要播放两种动画，一种是角色的开火动作动画，还有一种是武器的动作动画
+			Character->PlayFireMontage(bAiming);//角色类播放开火蒙太奇动画
+			EquippedWeapon->Fire(TraceHitTarget);//武器类触发开火事件
 		}
 }
 

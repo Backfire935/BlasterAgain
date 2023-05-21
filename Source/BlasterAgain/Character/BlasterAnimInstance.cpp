@@ -13,7 +13,7 @@ void UBlasterAnimInstance::NativeInitializeAnimation()
 	Super::NativeInitializeAnimation();
 
 	BlasterCharacter = Cast<ABlasterCharacter>(TryGetPawnOwner());
-
+	
 }
 
 //帧运行
@@ -43,7 +43,8 @@ void UBlasterAnimInstance::NativeUpdateAnimation(float DeltaTime)
 	bIsCrouched = BlasterCharacter->bIsCrouched;
 	//是否在瞄准
 	bAiming = BlasterCharacter->IsAiming();
-
+	//是否被淘汰
+	bElimed = BlasterCharacter->IsElimed();
 	//角色扫射状态身体的Yaw偏移
 	FRotator AimRotation =  BlasterCharacter->GetBaseAimRotation();//摄像机的旋转角度
 	FRotator MovementRotation =  UKismetMathLibrary::MakeRotFromX(BlasterCharacter->GetVelocity());//角色的旋转角度

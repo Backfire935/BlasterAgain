@@ -240,8 +240,20 @@ void ABlasterPlayerController::CheckPing(float DeltaTime)
 		{
 			float Ping = 0;
 			Ping = PlayerState->GetPingInMilliseconds();
-			UE_LOG(LogTemp, Warning, TEXT("%.0f"), Ping);
 
+			BlasterHUD = BlasterHUD == nullptr ? Cast<ABlasterHUD>(GetHUD()) : BlasterHUD;
+
+			UE_LOG(LogTemp, Warning, TEXT("%.0f"), Ping);
+			bool bValid = BlasterHUD &&
+				BlasterHUD->CharacterOverlay &&
+				BlasterHUD->CharacterOverlay->PingText;
+			if(bValid)
+			{
+				FString Text = FString::Printf(TEXT("%.0fms"), Ping);//将ping从float转为FString
+				BlasterHUD->CharacterOverlay->PingText->SetText(FText::FromString(Text));//将ping从FString转为FText
+			}
+	
+			
 			if (Ping > HighPingThreshold)//得到ping值并和警告的阈值进行比较
 			{
 				HighPingWarning(Ping);
@@ -800,8 +812,7 @@ void ABlasterPlayerController::HighPingWarning(float ping)//播放高ping警告�
 				0.f,
 			5
 			);
-		FString Text = FString::Printf(TEXT("%.0fms"), ping);//将ping从float转为FString
-		BlasterHUD->CharacterOverlay->PingText->SetText(FText::FromString(Text));//将ping从FString转为FText
+		
 	}
 }
 

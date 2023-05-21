@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "BulletShells.h"
 #include "WeaponTypes.h"
+#include "BlasterAgain/BlasterTypes/Team.h"
 #include "GameFramework/Actor.h"
 #include "Weapon.generated.h"
 
@@ -40,21 +41,38 @@ public:
 	virtual void Tick(float DeltaTime) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;//设置同步
 	void ShowPickupWidget(bool bShowWidget);
+
+	UFUNCTION()
 	virtual void Dropped();
 
-	virtual void OnRep_Owner() override;
-	void SetHUDAmmo();
+	UFUNCTION()
 	virtual void Fire(const FVector &HitTarget);
+	
+	virtual void OnRep_Owner() override;
+	
+	virtual void HandleWeaponEquiped();//处理装备过的武器
+	virtual void HandleWeaponSecondary();//处理第二把武器
+	
+	UFUNCTION()
+	void SetHUDAmmo();
+	
+
+	UFUNCTION()
 	FVector TraceWithScatter(const FVector& HitTarget);//喷子散射的射线检测
+	
 	UFUNCTION()
 	void ReadyDestroyWeapon();
+	
 	UFUNCTION()
 	void DestroyWeapon();
 	
 	FTimerHandle DestroyWeaponTimer;
+	
 	//bool bIsDroppedToDestroyed = false;//武器是否被丢到地上等待销毁
 	UPROPERTY(EditAnywhere, Category = "Combat")
 	float DestroyWeaponTime;
+
+	UFUNCTION()
 	void AddAmmo(int32 AmmoToAdd);
 
 	UPROPERTY(EditAnywhere, category = Combat)
@@ -105,10 +123,8 @@ public:
 protected:
 	
 	virtual void BeginPlay() override;
+
 	
-	
-	virtual void HandleWeaponEquiped();//处理装备过的武器
-	virtual void HandleWeaponSecondary();//处理第二把武器
 	
 	UFUNCTION()
 	virtual void OnSphereOverlap(UPrimitiveComponent * OverlappedComponent, AActor * OtherActor, UPrimitiveComponent * OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
@@ -190,7 +206,8 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Physics")
 		float AngularDamping = 0.1f; // 角阻尼系数
 
-	
+	UPROPERTY(EditAnywhere)
+	ETeam Team;
 public:
 	void SetWeaponState(EWeaponState State);
 
@@ -210,7 +227,7 @@ public:
 	FORCEINLINE int32 GetMagCapacity() const { return MagCapacity; }
 	FORCEINLINE float GetDamage() const { return Damage; }
 	FORCEINLINE float GetHeadShotDamage() const { return HeadShotDamage; }
-	
+	FORCEINLINE ETeam GetTeam() const { return Team; }
 };
 
 

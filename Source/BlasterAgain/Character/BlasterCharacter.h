@@ -39,6 +39,7 @@ public:
 	virtual void OnRep_ReplicatedMovement() override;//将角色转向应用到模拟代理的回调
 
 	void Elim(bool bPlayerLeftGame);//这个只在server上调用
+	
 	void DropOrDestroyWeapon(class AWeapon* Weapon);
 	void DropOrDestroyWeapons();
 	//销毁武器的问题
@@ -64,6 +65,7 @@ public:
 
 	void SpawnDefaultWeapon();
 	void PlayHitReactMontage();
+	
 	UPROPERTY()
 	TMap<FName, class UBoxComponent*> HitCollisionBoxes;
 
@@ -195,6 +197,8 @@ protected:
 	UPROPERTY(BlueprintReadWrite,EditAnywhere, Category = "Speed")
 		float CrouchAimSpeed = 150.f;//下蹲瞄准速度
 
+	
+
 	UPROPERTY(Replicated)
 	bool IsRunning = false;
 
@@ -218,7 +222,56 @@ protected:
 	UPROPERTY(EditAnywhere)
 	class UBoxComponent* head;
 
-	
+	UPROPERTY(EditAnywhere)
+	UBoxComponent* pelvis;
+
+	UPROPERTY(EditAnywhere)
+	UBoxComponent* spine_02;
+
+	UPROPERTY(EditAnywhere)
+	UBoxComponent* spine_03;
+
+	UPROPERTY(EditAnywhere)
+	UBoxComponent* upperarm_l;
+
+	UPROPERTY(EditAnywhere)
+	UBoxComponent* upperarm_r;
+
+	UPROPERTY(EditAnywhere)
+	UBoxComponent* lowerarm_l;
+
+	UPROPERTY(EditAnywhere)
+	UBoxComponent* lowerarm_r;
+
+	/*UPROPERTY(EditAnywhere)
+	UBoxComponent* hand_l;
+
+	UPROPERTY(EditAnywhere)
+	UBoxComponent* hand_r;
+
+	UPROPERTY(EditAnywhere)
+	UBoxComponent* backpack;
+
+	UPROPERTY(EditAnywhere)
+	UBoxComponent* blanket;*/
+
+	UPROPERTY(EditAnywhere)
+	UBoxComponent* thigh_l;
+
+	UPROPERTY(EditAnywhere)
+	UBoxComponent* thigh_r;
+
+	UPROPERTY(EditAnywhere)
+	UBoxComponent* calf_l;
+
+	UPROPERTY(EditAnywhere)
+	UBoxComponent* calf_r;
+
+	UPROPERTY(EditAnywhere)
+	UBoxComponent* foot_l;
+
+	UPROPERTY(EditAnywhere)
+	UBoxComponent* foot_r;
 
 
 private:
@@ -253,6 +306,15 @@ private:
 	UPROPERTY(VisibleAnywhere)
 	class ULagCompensationComponent* LagCompensationComp;
 
+	UPROPERTY(BlueprintReadWrite,EditAnywhere, Category = "CharacterComponent",meta = (AllowPrivateAccess = "true"))
+	bool bUseCombatComp = true;//是否创建战斗组件，按需创建
+	
+	UPROPERTY(BlueprintReadWrite,EditAnywhere, Category = "CharacterComponent",meta = (AllowPrivateAccess = "true"))
+	bool bUseBuffComp = true;//是否创建Buff组件，按需创建
+
+	UPROPERTY(BlueprintReadWrite,EditAnywhere, Category = "CharacterComponent",meta = (AllowPrivateAccess = "true"))
+	bool bUseLagCompensationComp = true;//是否创建延迟补偿组件，按需创建
+	
 	UPROPERTY(BlueprintReadWrite,EditAnywhere, Category = "EffectMaterials",meta = (AllowPrivateAccess = "true"))
 		UMaterialInterface* TransparentMaterial;//透明材质
 
@@ -403,6 +465,7 @@ private:
 	//友军伤害倍率
 	UPROPERTY(EditAnywhere, Category = "Team")
 		float TeamDamageRate = 1.f;
+	
 #pragma region EnhancedInput
 	///增强输入
 	//两个映射表
@@ -519,7 +582,9 @@ public:
 	FORCEINLINE void SetShield(float Amount) { Shield = Amount; }
 	FORCEINLINE bool GetDisableGamePlay() const { return bDisableGameplay; }
 
+	UFUNCTION(BlueprintCallable)
 	FORCEINLINE UCombatComponent* GetCombat() const { return CombatComp; }
+	
 	FORCEINLINE UAnimMontage* GetReloadMontage() const { return ReloadMontage; }
 	FORCEINLINE UStaticMeshComponent* GetAttachedGrenade() const { return AttachedGrenade; }
 	FORCEINLINE ETurningInPlace GetTurningInPlace() const { return TurningInPlace; }

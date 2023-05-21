@@ -57,7 +57,7 @@ public:
 	UFUNCTION(Server, Reliable)
 	void ServerLuncherGrenade(const FVector_NetQuantize& Target);
 
-	void PickupAmmp(EWeaponType WeaponType,int32 AmmoAmount);
+	void PickupAmmo(EWeaponType WeaponType,int32 AmmoAmount);
 
 	bool bLocallyReloading = false;
 protected:
@@ -75,8 +75,8 @@ protected:
 	UFUNCTION()
 	void OnRep_SecondaryWeapon();//装备第二把武器的Rep_Notify
 
-	UFUNCTION(Server, Reliable)
-	void ServerFire(const FVector_NetQuantize& TraceHitTarget);//服务器开火
+	UFUNCTION(Server, Reliable,WithValidation)
+	void ServerFire(const FVector_NetQuantize& TraceHitTarget, float FireDelay);//服务器开火
 
 	UFUNCTION(NetMulticast,  Reliable)
 	void MultiCastFire(const FVector_NetQuantize& TraceHitTarget);//服务器向客户端发起的开火通知
@@ -87,8 +87,10 @@ protected:
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastShotgunFire(const TArray<FVector_NetQuantize>& TraceHitTargets);//服务器向客户端发起的喷子开火通知
 
+	UFUNCTION()
 	void TraceUnderCrosshairs(FHitResult & TraceHitResult);
 
+	UFUNCTION()
 	void SetHUDCrosshairs(float DeltaTime);
 
 	UFUNCTION(Server, Reliable)
@@ -232,6 +234,7 @@ private:
 	 UFUNCTION()
 		 void OnRep_CarriedAmmo();
 
+	
 	 TMap<EWeaponType, int32> CarriedAmmoMap;//Map类型，hash算法无法在local和server上获得相同的结果，故用中间变量进行网络复制而不是TMap类型本身
 
 	 void InitializeCarriedAmmo();

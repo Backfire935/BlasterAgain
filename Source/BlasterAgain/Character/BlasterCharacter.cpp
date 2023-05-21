@@ -36,43 +36,58 @@ ABlasterCharacter::ABlasterCharacter()
 
 	PrimaryActorTick.bCanEverTick = true;
 	
+	//创建相机弹簧臂
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	CameraBoom->SetupAttachment(GetMesh());
 	CameraBoom->TargetArmLength = 600.f;
+	//使用Pawn控制旋转
 	CameraBoom->bUsePawnControlRotation = true;
 
+	//创建第一人称前置摄像头
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
-	//摄像机绑到角色头上
+	//摄像机绑到角色头上的骨骼插槽里
 	FollowCamera->SetupAttachment(GetMesh(), FName(TEXT("FollowCameraSocket")));
 
 	//创建第三人称摄像机
 	TPSCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("TPSCamera"));
 	TPSCamera->SetupAttachment(CameraBoom);
-
-	FollowCamera->bUsePawnControlRotation = true;
-
+	
 	//bUseControllerRotationYaw = false;
 	//GetCharacterMovement()->bOrientRotationToMovement = true;
+	
+	FollowCamera->bUsePawnControlRotation = true;
+	FollowCamera->SetActive(true); //激活第一人称摄像机，其实这个函数里面的实现就是下面Activate(),等开始游戏的时候切换到第一人称
+	FollowCamera->Activate();//还是激活，我不知道不写这行只写上面的行不行，不过我看了SetActive没有网络同步的内容，但是Activate()里面有Broadcast广播，所以我觉得还是留着吧，可以测试下
+	TPSCamera->SetActive(false); //关闭第三人称摄像机 这样进去后默认看到的是第一人称摄像机
+	TPSCamera->Deactivate();
 
+	//头部显示HUD 添加到角色Mesh上
 	OverHeadWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("OverheadWidget"));
 	OverHeadWidget->SetupAttachment(GetMesh());
 
-	FollowCamera->SetActive(true); //激活第三人称摄像机，其实这个函数里面的实现就是下面Activate(),等开始游戏的时候切换到第一人称
-	FollowCamera->Activate();//还是激活，我不知道不写这行只写上面的行不行，不过我看了SetActive没有网络同步的内容，但是Activate()里面有Broadcast广播，所以我觉得还是留着吧，你可以测试下
-	TPSCamera->SetActive(false);
-	TPSCamera->Deactivate();
-	
-	CombatComp = CreateDefaultSubobject<UCombatComponent>(TEXT("CombatComponent"));
-	CombatComp->SetIsReplicated(true);
+	//创建战斗组件，如果需要就创建，这个变量可以由游戏模式控制，如果是一个不需要战斗的游戏模式直接不创建这个组件到角色身上，这样可以减小消耗
+	if(bUseCombatComp)
+	{
+		CombatComp = CreateDefaultSubobject<UCombatComponent>(TEXT("CombatComponent"));
+		CombatComp->SetIsReplicated(true);
+	}
 
-	Buff = CreateDefaultSubobject<UBuffComponent>(TEXT("BuffComponent"));
-	Buff->SetIsReplicated(true);
+	//同上选择性创建
+	if(bUseBuffComp)
+	{
+		Buff = CreateDefaultSubobject<UBuffComponent>(TEXT("BuffComponent"));
+		Buff->SetIsReplicated(true);
+	}
 
-	//LagCompensationComp = CreateDefaultSubobject<ULagCompensationComponent>(TEXT("LagCompensationComp"));
+	//同上
+	if(bUseLagCompensationComp)
+	{
+		LagCompensationComp = CreateDefaultSubobject<ULagCompensationComponent>(TEXT("LagCompensationComp"));
+	}
 	
-	// 获取当前材质插槽的数量 
-	int32 MaterialSlotIndex0 = GetMesh()->GetMaterialIndex("18 - Default");
-	int32 MaterialSlotIndex1 = GetMesh()->GetMaterialIndex("12 - Default");
+	// 获取当前角色材质插槽的序号 
+	int32 MaterialSlotIndex0 = GetMesh()->GetMaterialIndex("18 - Default");//角色下半身材质
+	int32 MaterialSlotIndex1 = GetMesh()->GetMaterialIndex("12 - Default");//角色上半身材质
 	// 设置为透明的材质
 	GetMesh()->SetMaterial(MaterialSlotIndex0, NormalMaterialDown);
 	GetMesh()->SetMaterial(MaterialSlotIndex1, NormalMaterialUp);
@@ -89,19 +104,21 @@ ABlasterCharacter::ABlasterCharacter()
 	NetUpdateFrequency = 66.f;//网络更新频率，每秒66次
 	MinNetUpdateFrequency = 33.f;//最小网络更新频率，每秒33次
 
+	//创建时间轴组件
 	DissolveTimeline = CreateDefaultSubobject<UTimelineComponent>(TEXT("DissolveTimeLineComponent"));
+	//投掷物
 	AttachedGrenade = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Attached Grenade"));
 	AttachedGrenade->SetupAttachment(GetMesh(), FName("GrenadeSocket"));
 	AttachedGrenade->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
 	//
-	//身体的hitbox
+	//身体的hitbox,碰撞通道记得改成HitBox
 	//
 	head = CreateDefaultSubobject<UBoxComponent>(TEXT("head"));
 	head->SetupAttachment(GetMesh(), FName("head"));
 	HitCollisionBoxes.Add(FName("head"), head);
 
-	/*pelvis = CreateDefaultSubobject<UBoxComponent>(TEXT("pelvis"));
+	pelvis = CreateDefaultSubobject<UBoxComponent>(TEXT("pelvis"));
 	pelvis->SetupAttachment(GetMesh(), FName("pelvis"));
 	HitCollisionBoxes.Add(FName("pelvis"), pelvis);
 
@@ -136,7 +153,7 @@ ABlasterCharacter::ABlasterCharacter()
 	HitCollisionBoxes.Add(FName("lowerarm_r"), lowerarm_r);
 
 
-	hand_l = CreateDefaultSubobject<UBoxComponent>(TEXT("hand_l"));
+	/*hand_l = CreateDefaultSubobject<UBoxComponent>(TEXT("hand_l"));
 	hand_l->SetupAttachment(GetMesh(), FName("LeftHandSocket"));
 	HitCollisionBoxes.Add(FName("hand_l"), hand_l);
 
@@ -154,6 +171,7 @@ ABlasterCharacter::ABlasterCharacter()
 	backpack = CreateDefaultSubobject<UBoxComponent>(TEXT("backpack"));
 	backpack->SetupAttachment(GetMesh(), FName("backpack"));
 	HitCollisionBoxes.Add(FName("backpack"), backpack);
+	*/
 
 
 	thigh_l = CreateDefaultSubobject<UBoxComponent>(TEXT("thigh_l"));
@@ -183,7 +201,7 @@ ABlasterCharacter::ABlasterCharacter()
 
 	foot_r = CreateDefaultSubobject<UBoxComponent>(TEXT("foot_r"));
 	foot_r->SetupAttachment(GetMesh(), FName("foot_r"));
-	HitCollisionBoxes.Add(FName("foot_r"), foot_r);*/
+	HitCollisionBoxes.Add(FName("foot_r"), foot_r);
 
 	for(auto Box : HitCollisionBoxes)
 	{
@@ -195,7 +213,11 @@ ABlasterCharacter::ABlasterCharacter()
 			Box.Value->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 		}
 	}
-	
+
+	/*if (GetNetMode() == NM_DedicatedServer && GetMesh())
+	{
+		GetMesh()->VisibilityBasedAnimTickOption=   EVisibilityBasedAnimTickOption::AlwaysTickPoseAndRefreshBones;
+	}*/
 }
 
 void ABlasterCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -203,7 +225,73 @@ void ABlasterCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Ou
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME_CONDITION(ABlasterCharacter, OverlappingWeapon, COND_OwnerOnly); 
-	DOREPLIFETIME(ABlasterCharacter, IsRunning);
+	DOREPLIFETIME(ABlasterCharacter, IsRunning)
+	DOREPLIFETIME(ABlasterCharacter, Health);
+	DOREPLIFETIME(ABlasterCharacter, Shield);
+	DOREPLIFETIME(ABlasterCharacter, bDisableGameplay);
+
+}
+
+void ABlasterCharacter::BeginPlay()
+{
+	Super::BeginPlay();
+
+	ServerSetPlayerName(LocalPlayerName);
+	ServerSetMaterial();
+	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
+
+	SpawnDefaultWeapon();//生成初始武器，具体哪把需要在蓝图中设置
+	UpdateHUDAmmo();//拿到初始武器后设置HUD弹药
+	UpdateHUDHealth();//更新生命值HUD
+	UpdateHUDShield();//更新护盾HUD
+	if (HasAuthority())
+	{
+		OnTakeAnyDamage.AddDynamic(this, &ABlasterCharacter::ReceiveDamage);
+	}
+	if(AttachedGrenade)//初始化设置手雷的可视性为fasle
+		{
+		AttachedGrenade->SetVisibility(false);
+		}
+	///
+
+	//这段要一直放在函数最后
+	if(HasAuthority())
+	{
+		//服务端的本地就是服务端自己的客户端
+		ClientChangeView();
+		ClientChangeView();
+		return;
+	}
+	//如果是客户端执行，让服务端去改变，再传递给各个客户端来完成同步的效果
+	ServerChangeView();
+	ServerChangeView();
+	
+}
+
+void ABlasterCharacter::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+	AimOffset(DeltaTime);
+	//HideCameraIfCharacterClose();//如果角色和相机的距离过近则隐藏角色和枪械的模型
+	PollInit();//初始化BlasterPlayerState
+}
+
+void ABlasterCharacter::PollInit()
+{
+	if (BlasterPlayerState == nullptr)
+	{
+		BlasterPlayerState = GetPlayerState<ABlasterPlayerState>();
+		if (BlasterPlayerState)
+		{
+			OnPlayerStateInitialized();
+
+			ABlasterGameState* BlasterGameState = Cast<ABlasterGameState>(UGameplayStatics::GetGameState(this));
+			if (BlasterGameState && BlasterGameState->TopScoringPlayers.Contains(BlasterPlayerState))
+			{
+				MulticastGainedTheLead();
+			}
+		}
+	}
 }
 
 void ABlasterCharacter::PostInitializeComponents()
@@ -216,7 +304,6 @@ void ABlasterCharacter::PostInitializeComponents()
 	if(Buff)
 	{
 		Buff->Character = this;
-	
 	}
 	if(LagCompensationComp)
 	{
@@ -227,6 +314,9 @@ void ABlasterCharacter::PostInitializeComponents()
 		}
 	}
 }
+#pragma endregion Init
+
+
 
 void ABlasterCharacter::PlayFireMontage(bool bAiming)//播放开火的蒙太奇动画
 {
@@ -240,7 +330,7 @@ void ABlasterCharacter::PlayFireMontage(bool bAiming)//播放开火的蒙太奇�
 		AnimInstance->Montage_Play(FireWeaponMontage);//播放开火的蒙太奇动画
 		FName SectionName;
 		SectionName = bAiming ? FName("RifleAim") : FName("RifleHip");//选定是开镜的蒙太奇还是没开镜的
-		AnimInstance->Montage_JumpToSection(SectionName);//直接跳转到制定的蒙太奇动画
+		AnimInstance->Montage_JumpToSection(SectionName);//直接跳转到指定的蒙太奇动画
 	}
 }
 
@@ -248,7 +338,7 @@ void ABlasterCharacter::PlayReloadMontage()//播放重装弹夹的动画蒙太�
 {
 	if (CombatComp == nullptr || CombatComp->EquippedWeapon == nullptr)//检查武器组件是否为空，同时组件中是否存在已经装备的武器
 		{
-		return;
+			return;
 		}
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();//获取角色的模型再获取动画实例
 	if (AnimInstance && ReloadMontage)
@@ -294,6 +384,10 @@ void ABlasterCharacter::PlayReloadMontage()//播放重装弹夹的动画蒙太�
 void ABlasterCharacter::PlayElimMontage()
 {
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	//直接让玩家自由倒下
+	//GetMesh()->SetSimulatePhysics(true);
+	//开启重力
+	//GetMesh()->SetEnableGravity(true);
 	if (AnimInstance && ElimMontage)
 	{
 		AnimInstance->Montage_Play(ElimMontage);//播放升天的蒙太奇动画
@@ -413,8 +507,8 @@ void ABlasterCharacter::MulticastElim_Implementation(bool bPlayerLeftGame)//玩�
 		GetMesh()->SetMaterial(0, DynamicDissolveMaterialInstance);
 		DynamicDissolveMaterialInstance->SetScalarParameterValue(TEXT("Dissolve"),0.55f);
 		DynamicDissolveMaterialInstance->SetScalarParameterValue(TEXT("Glow"), 200.f);
+		StartDissolve();
 	}
-	StartDissolve();
 
 	//禁用角色移动
 	GetCharacterMovement()->DisableMovement();
@@ -526,7 +620,7 @@ void ABlasterCharacter::SpawnDefaultWeapon()
 
 void ABlasterCharacter::PlayHitReactMontage()
 {
-	if (CombatComp == nullptr || CombatComp->EquippedWeapon == nullptr)
+	if (CombatComp == nullptr)
 	{
 		return;
 	}//会检查被命中的人是否持有武器，若无武器则不会播放受击动画
@@ -535,7 +629,7 @@ void ABlasterCharacter::PlayHitReactMontage()
 	if (AnimInstance && HitReactMontage)
 	{
 	
-		AnimInstance->Montage_Play(HitReactMontage);//播放开火的蒙太奇动画
+		AnimInstance->Montage_Play(HitReactMontage);//播放被击中的蒙太奇动画
 		FName SectionName("FromForward");
 		//	SectionName = bAiming ? FName("RifleAim") : FName("RifleHip");//选定是开镜的蒙太奇还是没开镜的
 		AnimInstance->Montage_JumpToSection(SectionName);//直接跳转到制定的蒙太奇动画
@@ -608,50 +702,6 @@ void ABlasterCharacter::SetTeamColor(ETeam Team)
 	}
 }
 
-void ABlasterCharacter::BeginPlay()
-{
-	Super::BeginPlay();
-
-	ServerSetPlayerName(LocalPlayerName);
-	ServerSetMaterial();
-	GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
-
-	if (HasAuthority() && IsLocallyControlled())
-	{
-		//服务端的本地就是服务端自己的客户端
-		ClientChangeView();
-		ClientChangeView();
-		return;
-	}
-	//如果是客户端执行，让服务端去改变，再传递给各个客户端来完成同步的效果
-	ServerChangeView();
-	ServerChangeView();
-
-	SpawnDefaultWeapon();//生成初始武器，具体哪把需要在蓝图中设置
-	UpdateHUDAmmo();//拿到初始武器后设置HUD弹药
-	UpdateHUDHealth();//更新生命值HUD
-	UpdateHUDShield();//更新护盾HUD
-	if (HasAuthority())
-	{
-		OnTakeAnyDamage.AddDynamic(this, &ABlasterCharacter::ReceiveDamage);
-	}
-	if(AttachedGrenade)//初始化设置手雷的可视性为fasle
-		{
-		AttachedGrenade->SetVisibility(false);
-		}
-	///
-}
-
-void ABlasterCharacter::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
-	AimOffset(DeltaTime);
-	//HideCameraIfCharacterClose();//如果角色和相机的距离过近则隐藏角色和枪械的模型
-	PollInit();//初始化BlasterPlayerState
-}
-
-
-#pragma endregion Init
 
 #pragma region PlayerName
 void ABlasterCharacter::ClientSetName_Implementation(const FString& Name)
@@ -829,6 +879,7 @@ void ABlasterCharacter::CrouchButtonPressed(const FInputActionValue& InputValue)
 
 void ABlasterCharacter::InputAimingPressed(const FInputActionValue& InputValue)
 {
+	//PlayerController->SetViewTargetWithBlend(CurrentFPSCamera, 0.1f);
 	if (CombatComp)
 	{
 		CombatComp->SetAiming(true);
@@ -848,12 +899,24 @@ void ABlasterCharacter::InputAimingReleased(const FInputActionValue& InputValue)
 #pragma  region notstart
 void ABlasterCharacter::FirePressed(const FInputActionValue& InputValue)
 {
+	if (bDisableGameplay)return;//如果设置为true，则代表禁用了此项输入
+	if (CombatComp && CombatComp->bHoldingTheFlag) return;
 
+	if (CombatComp)
+	{
+		CombatComp->FireButtonPressed(true);
+	}
 }
 
 void ABlasterCharacter::FireReleased(const FInputActionValue& InputValue)
 {
+	if (bDisableGameplay)return;//如果设置为true，则代表禁用了此项输入
+	if (CombatComp && CombatComp->bHoldingTheFlag) return;
 
+	if (CombatComp)
+	{	
+		CombatComp->FireButtonPressed(false);
+	}
 }
 
 
@@ -861,7 +924,13 @@ void ABlasterCharacter::FireReleased(const FInputActionValue& InputValue)
 
 void ABlasterCharacter::InputReload(const FInputActionValue& InputValue)
 {
-
+	if (bDisableGameplay)return;//如果设置为true，则代表禁用了此项输入
+	if (CombatComp && CombatComp->bHoldingTheFlag) return;
+	
+	if (CombatComp)
+	{
+		CombatComp->Reload();
+	}
 }
 #pragma  endregion notstart
 
@@ -882,11 +951,13 @@ void ABlasterCharacter::InputShiftView(const FInputActionValue& InputValue)
 
 void ABlasterCharacter::ServerChangeView_Implementation()
 {
-	//需要修改服务器上的版本，因为服务器上的版本是用来同步给别的客户端的，别的客户端不与正在执行动作的客户端通信，别的客户端拿的是服务端的数据
+	//需要修改服务器上的版本，执行到这了，这个函数是在服务端上运行的，ChangeCameraView改变的是服务端上的备份。
+	//因为服务器上的版本是用来同步给别的客户端的，别的客户端不与正在执行动作的客户端通信，别的客户端拿的是服务端的数据
 		ChangeCameraView();
-	//再去让正在执行动作的客户端去真正实现功能
+	//让正在执行动作的客户端去真正实现功能
 	
-		ClientChangeView();//注释此函数后，客户端角色能同步旋转但是不能改变视角，原因是没有收到Server发来的ClientChangeView()所以改变不了视角，但是和角色移动旋转相关的属性是默认实现网络同步的，是否旋转属性在上面Server端被修改的时候就被同步到客户端了，因此不需要Server发来的ClientChangeView()也改变了旋转。
+		ClientChangeView();//注释此函数后，客户端角色能同步旋转但是不能改变视角，原因是没有收到Server发来的ClientChangeView()所以改变不了视角，
+							//但是和角色移动旋转相关的属性是默认实现网络同步的，是否旋转属性在上面Server端被修改的时候就被同步到客户端了，因此不需要Server发来的ClientChangeView()也改变了旋转。
 }
 
 void ABlasterCharacter::ClientChangeView_Implementation()
@@ -1119,26 +1190,35 @@ void ABlasterCharacter::AimOffset(float DeltaTime)
 		return;
 		//无需处理后面的
 	}
-	//处理第三人称下的偏移
-	 FVector Velocity = GetVelocity();
-	Velocity.Z = 0.f;
-	//设置速度
-	 float Speed = Velocity.Size();
-	//是否在空中
-	 bool bIsInAir = GetCharacterMovement()->IsFalling();
+	
+		
+		//处理第三人称下的偏移
+		FVector Velocity = GetVelocity();
+		Velocity.Z = 0.f;
+		//设置速度
+		float Speed = Velocity.Size();
+		//是否在空中
+		bool bIsInAir = GetCharacterMovement()->IsFalling();
 
-	if(Speed == 0.f && !bIsInAir)//静止状态没有跳跃
-	{
-		 FRotator CurrentAimRotation = FRotator(0.f, GetBaseAimRotation().Yaw, 0.f);
-		 FRotator DeltaAimRotation = UKismetMathLibrary::NormalizedDeltaRotator(CurrentAimRotation,StartingAimRotation);
-		AO_Yaw = DeltaAimRotation.Yaw;
-		bUseControllerRotationYaw = false;
-	}
-	if(Speed >0.f || bIsInAir)//奔跑或者跳跃
-	{
-		StartingAimRotation = FRotator(0.f, GetBaseAimRotation().Yaw, 0.f);
-		bUseControllerRotationYaw = true;
-	}
+		if(Speed == 0.f && !bIsInAir)//静止状态没有跳跃
+			{
+			FRotator CurrentAimRotation = FRotator(0.f, GetBaseAimRotation().Yaw, 0.f);
+			FRotator DeltaAimRotation = UKismetMathLibrary::NormalizedDeltaRotator(CurrentAimRotation,StartingAimRotation);
+			AO_Yaw = DeltaAimRotation.Yaw;
+			if (TurningInPlace == ETurningInPlace::ETIP_NotTurning)
+			{
+				InterpAO_Yaw = AO_Yaw;
+			}
+			bUseControllerRotationYaw = false;//关闭角色朝向旋转
+			}
+		if(Speed >0.f || bIsInAir)//奔跑或者跳跃
+			{
+			AO_Yaw = 0.f;	
+			StartingAimRotation = FRotator(0.f, GetBaseAimRotation().Yaw, 0.f);
+			bUseControllerRotationYaw = true;
+			}
+	
+	
 }
 
 
@@ -1222,12 +1302,13 @@ void ABlasterCharacter::ReceiveDamage(AActor* DamagedActor, float Damage, const 
 			NotHitedShield = Shield;//存储一次还没收到攻击时的护盾值
 			Shield = FMath::Clamp(Shield - DamageToHealth, 0.f, MaxShield);//设置新的护盾值和受到的伤害
 			DamageToHealth = DamageToHealth - NotHitedShield;//设置对血条造成的伤害为扣除护盾抵挡后的伤害
-
+			//播放被击中身体的声音
 			}
 		else//伤害比护盾低，只有护盾降低
 			{
 			Shield = FMath::Clamp(Shield - DamageToHealth, 0.f, MaxShield);//设置护盾值和受到的伤害
 			DamageToHealth = 0.f;//本次攻击不会对血条造成影响
+			//播放被击中护盾的声音
 			}
 	}
 
@@ -1247,23 +1328,6 @@ void ABlasterCharacter::ReceiveDamage(AActor* DamagedActor, float Damage, const 
 		}
 }
 
-void ABlasterCharacter::PollInit()
-{
-	if (BlasterPlayerState == nullptr)
-	{
-		BlasterPlayerState = GetPlayerState<ABlasterPlayerState>();
-		if (BlasterPlayerState)
-		{
-			OnPlayerStateInitialized();
-
-			ABlasterGameState* BlasterGameState = Cast<ABlasterGameState>(UGameplayStatics::GetGameState(this));
-			if (BlasterGameState && BlasterGameState->TopScoringPlayers.Contains(BlasterPlayerState))
-			{
-				MulticastGainedTheLead();
-			}
-		}
-	}
-}
 
 
 bool ABlasterCharacter::IsWeaponEquipped()
@@ -1391,7 +1455,7 @@ void ABlasterCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 		EnhancedInputComponent->BindAction(IA_Equip, ETriggerEvent::Triggered, this, &ABlasterCharacter::EquipButtonPressed);
 
 		
-		// 你可以通过更改"ETriggerEvent"枚举值，绑定到此处的任意触发器事件
+		// 你可以通过更改"ETriggerEvent"枚举值，绑定到此处的任意触发器事件.
 		//Input->BindAction(AimingInputAction, ETriggerEvent::Triggered, this, &AFPSBaseCharacter::SomeCallbackFunc);
 
 	}

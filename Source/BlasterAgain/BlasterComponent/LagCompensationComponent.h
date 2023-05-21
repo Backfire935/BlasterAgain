@@ -74,6 +74,7 @@ class BLASTERAGAIN_API ULagCompensationComponent : public UActorComponent
 public:	
 
 	ULagCompensationComponent();
+	
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
 	friend  class ABlasterCharacter;
@@ -144,10 +145,11 @@ private:
 
 	TDoubleLinkedList<FFramePackage> FrameHistory;//双链表用于存储一段时间内的帧包流水
 
-	UPROPERTY(EditAnywhere)
-	float MaxRecordTime = 4.0f;//打算存储的时间
+	UPROPERTY(EditAnywhere,Category="Time")
+	float MaxRecordTime = 2.0f;//打算存储的时间
 
-	
+	UPROPERTY(EditAnywhere,Category="Time")
+	float FramePackageShowTime = 2.0f;//打算存储的时间
 protected:
 
 	

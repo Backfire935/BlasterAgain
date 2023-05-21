@@ -65,6 +65,7 @@ void AWeapon::BeginPlay()
 	{
 		PickupWidget->SetVisibility(false);
 	}
+	
 }
 
 
@@ -157,6 +158,7 @@ void AWeapon::OnRep_WeaponState()//处理武器不同状态时客户端武器的物理效果
 	case EWeaponState::Weapon_Initial:
 		ShowPickupWidget(false);
 		break;
+		
 	case  EWeaponState::Weapon_Equipped :
 		ShowPickupWidget(false);
 		//关闭模拟物理
@@ -169,6 +171,7 @@ void AWeapon::OnRep_WeaponState()//处理武器不同状态时客户端武器的物理效果
 			HandSocket->AttachActor(this, BlasterCharacter->GetMesh()); //在插槽上将武器附加到身体上
 		}
 		break;
+		
 	case EWeaponState::Weapon_Dropped :
 		ShowPickupWidget(false);
 		WeaponMesh->DetachFromComponent(DetachRules);//不论组件被附加到什么上面都会拆下来，自动解绑被绑在一起的组件
@@ -179,7 +182,8 @@ void AWeapon::OnRep_WeaponState()//处理武器不同状态时客户端武器的物理效果
 		WeaponMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics); // 启用碰撞检测和物理模拟
 		//开启重力
 		WeaponMesh->SetEnableGravity(true);
-	
+		break;
+		
 	case EWeaponState::Weapon_EquippedSecondary :
 		{
 			HandleWeaponSecondary();
@@ -311,7 +315,7 @@ void AWeapon::Fire(const FVector& HitTarget)
 	//武器产生开火的效果
 	if (FireAnimation)//如果开火动画存在的话,由武器模型播放这个开火动画
 		{
-		WeaponMesh->PlayAnimation(FireAnimation, false);//第二个参数是循环播放的参数，设置为false
+			WeaponMesh->PlayAnimation(FireAnimation, false);//第二个参数是循环播放的参数，设置为false
 		}
 
 	//武器生成并抛出子弹壳
@@ -320,7 +324,7 @@ void AWeapon::Fire(const FVector& HitTarget)
 		const USkeletalMeshSocket* AmmoEjectSocket = WeaponMesh->GetSocketByName(FName("AmmoEject"));//获取武器枪口的插槽
 		if (AmmoEjectSocket)//枪口插槽的位置
 			{
-			FTransform SocketTransform = AmmoEjectSocket->GetSocketTransform(GetWeaponMesh());//获取当前手上的武器的枪口插槽的位置和旋转信息，这就是子弹壳抛出的方向，具体需要在枪械的骨骼中设置插槽位置和旋转角度
+			FTransform SocketTransform = AmmoEjectSocket->GetSocketTransform(WeaponMesh);//获取当前手上的武器的枪口插槽的位置和旋转信息，这就是子弹壳抛出的方向，具体需要在枪械的骨骼中设置插槽位置和旋转角度
 			UWorld* World = GetWorld();//获取世界场景
 			if (World)
 			{

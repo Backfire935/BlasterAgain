@@ -434,7 +434,7 @@ void ULagCompensationComponent::ShowFramePackage(const FFramePackage& Package, c
 			FQuat(BoxInfo.Value.Rotation),
 			Color,
 			false,
-			5.0f
+			FramePackageShowTime
 		);
 	}
 }
@@ -623,6 +623,7 @@ void ULagCompensationComponent::SaveFramePackage()
 		FFramePackage ThisFrame;
 		SaveFramePackage(ThisFrame);//存下第一帧
 		FrameHistory.AddHead(ThisFrame);//添加到链表中
+		
 	}
 	else//添加了一帧以上的情况
 	{
@@ -637,25 +638,29 @@ void ULagCompensationComponent::SaveFramePackage()
 		SaveFramePackage(ThisFrame);//获取当前帧
 		FrameHistory.AddHead(ThisFrame);//当前帧添加到链表中
 
-		//ShowFramePackage(ThisFrame, FColor::Red);
+		ShowFramePackage(ThisFrame, FColor::Blue);
 	}
 }
 
 void ULagCompensationComponent::SaveFramePackage(FFramePackage& Package)//帧打包
 {
 	Character = Character == nullptr ? Cast<ABlasterCharacter>(GetOwner()) : Character;
-	if (Character)
+	if (Character && Character->HitCollisionBoxes.Num() > 0)
 	{
 		Package.time = GetWorld()->GetTimeSeconds();//帧包中添加时间
 		Package.Character = Character;
 		for (auto& BoxPair : Character->HitCollisionBoxes)
 		{
-			FBoxInformation  BoxInformation;
-			BoxInformation.Location = BoxPair.Value->GetComponentLocation();//Value就是组件
-			BoxInformation.Rotation = BoxPair.Value->GetComponentRotation();
-			BoxInformation.BoxExtent = BoxPair.Value->GetScaledBoxExtent();//获取组件盒体大小
-			//打包信息
-			Package.HitBoxInfo.Add(BoxPair.Key, BoxInformation);// HitBoxInfo的结构是TMap<FName, FBoxInformation>，所以使用BoxPair.Key
+			if (BoxPair.Value != nullptr)//反正因为此时获得的BoxPair.Value为空而导致编辑器奔溃，修了一天
+			{
+				FBoxInformation  BoxInformation;
+				BoxInformation.Location = BoxPair.Value->GetComponentLocation();//Value就是组件
+				BoxInformation.Rotation = BoxPair.Value->GetComponentRotation();
+				BoxInformation.BoxExtent = BoxPair.Value->GetScaledBoxExtent();//获取组件盒体大小
+				//打包信息
+				Package.HitBoxInfo.Add(BoxPair.Key, BoxInformation);// HitBoxInfo的结构是TMap<FName, FBoxInformation>，所以使用BoxPair.Key
+			}
+			
 		}
 	}
 }
