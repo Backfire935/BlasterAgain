@@ -34,7 +34,7 @@ public:
 	//处理会话函数  菜单类会调用这些
 	//	 
 	//菜单访问子系统 调用创建会话函数 回调在线子系统设置并调用在线子系统接口函数来创建会话
-	void CreateSession(int32 NumPublicConnections, FString MatchType);//连接人数  匹配的游戏类型
+	void CreateSession(int32 NumPublicConnections, FString MatchType);//能够连接的人数  匹配的游戏类型,就是房间名
 	void FindSessions(int32 MaxSearchResults); //最大搜索结果
 	void JoinSession(const FOnlineSessionSearchResult& SessionResult);//
 	void DestroySession();

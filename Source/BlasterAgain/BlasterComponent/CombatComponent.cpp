@@ -5,6 +5,7 @@
 #include "BlasterAgain/HUD/BlasterHUD.h"
 #include "BlasterAgain/Interfaces/InteractWithCrosshairsInterface.h"
 #include "BlasterAgain/PlayerController/BlasterPlayerController.h"
+#include "BlasterAgain/PlayerController/FPSAimCamera.h"
 #include "BlasterAgain/Weapon/ShotGun.h"
 #include "BlasterAgain/Weapon/Weapon.h"
 #include "BlasterAgain/Weapon/WeaponTypes.h"
@@ -151,6 +152,15 @@ void UCombatComponent::EquipWeapon(AWeapon* WeaponToEquip)
 	UpdateCarriedAmmo();
 	//Character->GetCharacterMovement()->bOrientRotationToMovement = false;
 	//Character->bUseControllerRotationYaw = true;
+	
+	/*if(Character->GetAimCamera())
+	{
+		Character->GetAimCamera()->AttachToComponent(EquippedWeapon->GetWeaponMesh(),FAttachmentTransformRules::SnapToTargetIncludingScale,FName(TEXT("AimSocket")));
+		UE_LOG(LogTemp,Warning,TEXT("GetAimActor = %.0f,%.0f,%.0f"),
+			Character->GetAimCamera()->GetActorLocation().X,
+			Character->GetAimCamera()->GetActorLocation().Y,
+			Character->GetAimCamera()->GetActorLocation().Z);
+	}*/
 }
 
 
@@ -726,13 +736,17 @@ void UCombatComponent::InterpFOV(float DeltaTime)
 		CurrentFOV = FMath::FInterpTo(CurrentFOV, EquippedWeapon->GetZoomedFOV(), DeltaTime, EquippedWeapon->GetZoomedInterpSpeed());//对处于瞄准状态的FOV进行设置
 	}
 	else
-	{//
-		CurrentFOV = FMath::FInterpTo(CurrentFOV, DefaultFOV, DeltaTime, ZoomInterpSpeed);//对非瞄准状态的FOV进行设置
-	}
-	if (Character && Character->GetFollowCamera())
 	{
-		Character->GetFollowCamera()->SetFieldOfView(CurrentFOV);//设置为当前的FOV
+		CurrentFOV = FMath::FInterpTo(CurrentFOV, DefaultFOV, DeltaTime, ZoomInterpSpeed);//对非瞄准状态的FOV进行设置
+		
+		/*if (Character && Character->GetFollowCamera())
+		{
+			Character->GetFollowCamera()->SetFieldOfView(CurrentFOV);//设置为当前的FOV
+		}*/
 	}
+	
+	
+	
 }
 
 void UCombatComponent::StartFireTimer()

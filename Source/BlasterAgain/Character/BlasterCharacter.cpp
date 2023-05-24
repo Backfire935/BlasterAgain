@@ -28,6 +28,7 @@
 #include "NiagaraFunctionLibrary.h"
 #include "BlasterAgain/BlasterAgain.h"
 #include "BlasterAgain/GameState/BlasterGameState.h"
+#include "BlasterAgain/PlayerController/FPSAimCamera.h"
 #include "BlasterAgain/PlayerStart/TeamPlayerStart.h"
 #include "Components/BoxComponent.h"
 #pragma region Init
@@ -84,6 +85,8 @@ ABlasterCharacter::ABlasterCharacter()
 	{
 		LagCompensationComp = CreateDefaultSubobject<ULagCompensationComponent>(TEXT("LagCompensationComp"));
 	}
+	
+	
 	
 	// 获取当前角色材质插槽的序号 
 	int32 MaterialSlotIndex0 = GetMesh()->GetMaterialIndex("18 - Default");//角色下半身材质
@@ -265,6 +268,12 @@ void ABlasterCharacter::BeginPlay()
 	//如果是客户端执行，让服务端去改变，再传递给各个客户端来完成同步的效果
 	ServerChangeView();
 	ServerChangeView();
+
+	FActorSpawnParameters SpawnParameters;
+	SpawnParameters.Owner = this;
+	SpawnParameters.Instigator = GetInstigator();
+	SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	
 	
 }
 
@@ -769,7 +778,7 @@ void ABlasterCharacter::LookRightRate(const FInputActionValue& InputValue)
 void ABlasterCharacter::LookUpRate(const FInputActionValue& InputValue)
 {
 	AddControllerPitchInput(InputValue.GetMagnitude() * TurnRateGamepad * GetWorld()->GetDeltaSeconds());
-}
+}	
 
 void ABlasterCharacter::OnJump(const FInputActionValue& InputValue)
 {
@@ -879,11 +888,19 @@ void ABlasterCharacter::CrouchButtonPressed(const FInputActionValue& InputValue)
 
 void ABlasterCharacter::InputAimingPressed(const FInputActionValue& InputValue)
 {
-	//PlayerController->SetViewTargetWithBlend(CurrentFPSCamera, 0.1f);
+	
 	if (CombatComp)
 	{
 		CombatComp->SetAiming(true);
+	}
 
+	if(CombatComp->EquippedWeapon)
+	{
+		//八行代码
+		FollowCamera->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
+		FollowCamera->AttachToComponent(CombatComp->EquippedWeapon->GetWeaponMesh(), FAttachmentTransformRules::KeepWorldTransform,FName(TEXT("AimSocket")));
+		FollowCamera->SetWorldLocation(CombatComp->EquippedWeapon->GetWeaponMesh()->GetSocketLocation(TEXT("AimSocket")));
+		FollowCamera->SetWorldRotation(CombatComp->EquippedWeapon->GetWeaponMesh()->GetSocketRotation(TEXT("AimSocket")));
 	}
 }
 
@@ -893,6 +910,11 @@ void ABlasterCharacter::InputAimingReleased(const FInputActionValue& InputValue)
 	{
 		CombatComp->SetAiming(false);
 	}
+	FollowCamera->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
+	FollowCamera->AttachToComponent(GetMesh(), FAttachmentTransformRules::KeepWorldTransform,FName(TEXT("FollowCameraSocket")));
+	FollowCamera->SetWorldLocation(GetMesh()->GetSocketLocation(TEXT("FollowCameraSocket")));
+	FollowCamera->SetWorldRotation(GetMesh()->GetSocketRotation(TEXT("FollowCameraSocket")));
+
 }
 #pragma endregion Input
 

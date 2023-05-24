@@ -5,19 +5,20 @@
 #include "BlasterAgain/BlasterComponent/CombatComponent.h"
 #include "BlasterAgain/Character/BlasterCharacter.h"
 #include "BlasterAgain/PlayerController/BlasterPlayerController.h"
+#include "BlasterAgain/PlayerController/FPSAimCamera.h"
+#include "Camera/CameraComponent.h"
 #include "Components/SphereComponent.h"
 #include "Components/WidgetComponent.h"
 #include "Engine/SkeletalMeshSocket.h"
-#include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Net/UnrealNetwork.h"
-#include "PhysicalMaterials/PhysicalMaterial.h"
+
 
 
 AWeapon::AWeapon()
 {
  	
-	PrimaryActorTick.bCanEverTick = false;
+	PrimaryActorTick.bCanEverTick = true;
 
 	bReplicates = true;
 	SetReplicateMovement(true);
@@ -50,6 +51,7 @@ void AWeapon::EnableCustomDepth(bool bEnable)
 	}
 }
 
+
 void AWeapon::BeginPlay()
 {
 	Super::BeginPlay();
@@ -65,6 +67,13 @@ void AWeapon::BeginPlay()
 	{
 		PickupWidget->SetVisibility(false);
 	}
+	
+	//AimActor = GetWorld()->SpawnActor<AActor>();
+	FActorSpawnParameters SpawnParameters;
+	SpawnParameters.Owner = this;
+	SpawnParameters.Instigator = GetInstigator();
+	SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
 	
 }
 
@@ -131,6 +140,29 @@ void AWeapon::HandleWeaponSecondary()
 void AWeapon::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+	
+	
+}
+
+
+void AWeapon::AimWithPicth()
+{
+	APlayerController* PlayerController = GetWorld()->GetFirstPlayerController();
+	if(PlayerController)
+	{
+		float PlayerPitch = PlayerController->GetControlRotation().Pitch;
+		float PlayerYaw = PlayerController->GetControlRotation().Yaw;
+		//float PlayerRoll = PlayerController->GetControlRotation().Roll;
+		if(BlasterOwnerCharacter)
+		{
+			if(BlasterOwnerCharacter->IsAiming())
+			{
+				
+				//FRotator ActorRotation = FRotator(0,PlayerYaw-90,-PlayerPitch);
+				//SetActorRotation(ActorRotation);
+			}
+		}
+	}
 
 }
 

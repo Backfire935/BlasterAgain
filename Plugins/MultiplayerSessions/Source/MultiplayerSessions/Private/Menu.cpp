@@ -6,7 +6,6 @@
 #include "MultiplayerSessionSubsystem.h"
 #include "Interfaces/OnlineSessionInterface.h"
 #include "OnlineSubsystem.h"
-#include "Interfaces/OnlineSessionInterface.h"
 #include "OnlineSessionSettings.h" 
 void UMenu::MenuSetup(int32 NumberOfPublicConnections , FString TypeOfMatch, FString LobbyPath)
 {
@@ -84,18 +83,19 @@ bool UMenu::Initialize()
 	return true;
 }
 
+/*void UMenu::OnLevelRemovedFromWorld(ULevel* InLevel, UWorld* InWorld)
+{
+	MenuTearDown();
+	Super::OnLevelRemovedFromWorld(InLevel, InWorld);
+}*/
+
 void UMenu::NativeDestruct()
 {
-
 	MenuTearDown();
-	
 	Super::NativeDestruct();
-	//if (InLevel == nullptr && InWorld == GetWorld())
-	//{
-	//	RemoveFromParent();
-	//}
-	
 }
+
+
 
 void UMenu::OnCreateSession(bool bWasSuccessful)
 {

@@ -273,17 +273,19 @@ protected:
 	UPROPERTY(EditAnywhere)
 	UBoxComponent* foot_r;
 
-
+	
 private:
 
 	UPROPERTY(VisibleAnywhere, Category = "Camera")
 		class  USpringArmComponent* CameraBoom;
 
 	UPROPERTY(VisibleAnywhere, Category = "Camera")
-		class UCameraComponent* FollowCamera;
+	class UCameraComponent* FollowCamera;
+
 
 	UPROPERTY(VisibleAnywhere, Category = "Camera")
-		class UCameraComponent* TPSCamera;
+		 UCameraComponent* TPSCamera;
+
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 		 class UWidgetComponent* OverHeadWidget;
@@ -465,7 +467,8 @@ private:
 	//友军伤害倍率
 	UPROPERTY(EditAnywhere, Category = "Team")
 		float TeamDamageRate = 1.f;
-	
+
+
 #pragma region EnhancedInput
 	///增强输入
 	//两个映射表
@@ -588,10 +591,14 @@ public:
 	FORCEINLINE UAnimMontage* GetReloadMontage() const { return ReloadMontage; }
 	FORCEINLINE UStaticMeshComponent* GetAttachedGrenade() const { return AttachedGrenade; }
 	FORCEINLINE ETurningInPlace GetTurningInPlace() const { return TurningInPlace; }
-	FORCEINLINE UCameraComponent* GetFollowCamera() const { return FollowCamera; }
+
+	FORCEINLINE UCameraComponent* GetTPSCamera() const { return TPSCamera; }
 	FORCEINLINE UBuffComponent* GetBuff() const { return Buff; }
+
 	FORCEINLINE ULagCompensationComponent* GetLagCompensationComponent() const { return LagCompensationComp; }
-	
+
+	FORCEINLINE UCameraComponent* GetFollowCamera() const { return FollowCamera; }
+
 };
 
 

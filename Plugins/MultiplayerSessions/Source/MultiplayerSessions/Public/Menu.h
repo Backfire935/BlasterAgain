@@ -21,15 +21,15 @@ public:
 	void MenuSetup(int32 NumberOfPublicConnections = 100, FString TypeOfMatch = FString(TEXT("FreeForAll")), FString LobbyPath = FString(TEXT("/Game/ThirdPerson/Maps/LobbyMap")) );
 protected:
 	
-	virtual bool Initialize() override;	//³õÊ¼»¯°´Å¥¿Ø¼ş
+	virtual bool Initialize() override;	//åˆå§‹åŒ–æŒ‰é’®æ§ä»¶
 
-	virtual void NativeDestruct() override ; //´ò¿ªĞÂ¹Ø¿¨Ê±Ïú»ÙËùÓĞµ±Ç°¹Ø¿¨
-	//UE5.1 É¾³ıOnLevelRemoveFromWorldº¯Êı£¬Ê¹ÓÃNativeDestructº¯ÊıÌæ»»£¬5.1°æ±¾ÒÔÏÂ»»»ØOnLevelRemoveFromWorld£¬¸ĞĞ»epicÌÖÂÛÇøÀÏ¸ç¾ÈÎÒÒ»Ãü
+	virtual void NativeDestruct() override ; //æ‰“å¼€æ–°å…³å¡æ—¶é”€æ¯æ‰€æœ‰å½“å‰å…³å¡
+	//UE5.1 åˆ é™¤OnLevelRemoveFromWorldå‡½æ•°ï¼Œä½¿ç”¨NativeDestructå‡½æ•°æ›¿æ¢ï¼Œ5.1ç‰ˆæœ¬ä»¥ä¸‹æ¢å›OnLevelRemoveFromWorldï¼Œæ„Ÿè°¢epicè®¨è®ºåŒºè€å“¥æ•‘æˆ‘ä¸€å‘½
 	// https://forums.unrealengine.com/t/where-is-uuserwidget-onlevelremovedfromworld-in-5-1/692215/7
-	// void OnLevelRemoveFromWorld(ULevel* InLevel, UWorld* InWorld) ;  //Õâ¸öµØ·½ÊÇ´ó¿Ó RemovedÉÙĞ´Ò»¸öd ¸Äbug¸ÄÁ½Ğ¡Ê± ÒòÎªÕæÓĞ²»ÒªdµÄº¯Êı
+	 //virtual void OnLevelRemovedFromWorld(ULevel* InLevel, UWorld* InWorld) override ;  //è¿™ä¸ªåœ°æ–¹æ˜¯å¤§å‘ Removedå°‘å†™ä¸€ä¸ªd æ”¹bugæ”¹ä¸¤å°æ—¶ å› ä¸ºçœŸæœ‰ä¸è¦dçš„å‡½æ•°
 
 	//
-	//Îª¶àÈË»á»°×ÓÏµÍ³Î¯ÍĞµÄ»Øµ÷º¯Êı
+	//ä¸ºå¤šäººä¼šè¯å­ç³»ç»Ÿå§”æ‰˜çš„å›è°ƒå‡½æ•°
 	//
 	UFUNCTION()
 	void OnCreateSession(bool bWasSuccessful);
@@ -44,7 +44,7 @@ protected:
 	void OnStartSession(bool bWasSuccessful);
 
 private:
-	//°ó¶¨À¶Í¼ÖĞµÄ°´Å¥µ½ÏÂÃæµÄ±äÁ¿ÖĞ  Í¬Ãû°ó¶¨
+	//ç»‘å®šè“å›¾ä¸­çš„æŒ‰é’®åˆ°ä¸‹é¢çš„å˜é‡ä¸­  åŒåç»‘å®š
 	UPROPERTY(meta = (BindWidget))	
 	class UButton* HostButton;	
 	UPROPERTY(meta = (BindWidget))
@@ -60,7 +60,7 @@ private:
 
 	void MenuTearDown();
 
-	//ÓÃÓÚ´¦ÀíËùÓĞµÄÔÚÏß»á»°¹¦ÄÜµÄ×ÓÏµÍ³
+	//ç”¨äºå¤„ç†æ‰€æœ‰çš„åœ¨çº¿ä¼šè¯åŠŸèƒ½çš„å­ç³»ç»Ÿ
 	class UMultiplayerSessionSubsystem* MultiplayerSessionsSubsystem;
 
 	UPROPERTY(BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
@@ -68,6 +68,7 @@ private:
 
 	UPROPERTY(BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
 	FString MatchType{ TEXT("FreeForAll") };
+	UPROPERTY(BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
 	FString PathToLobby{ TEXT("")};
 };
 	

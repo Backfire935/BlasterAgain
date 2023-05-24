@@ -104,7 +104,7 @@ public:
 	float ZoomedFOV = 30.F;
 
 	UPROPERTY(EditAnywhere)
-	float ZoomInterpSpeed = 20.f;
+	float ZoomInterpSpeed = 5.f;
 
 	UPROPERTY(EditAnywhere)
 	class USoundCue* EquipSound;//装备武器时的音效
@@ -119,7 +119,8 @@ public:
 
 	UPROPERTY(EditAnywhere, Category = "Weapon Scatter")
 	bool bUseScatter = false;//是否允许子弹散射
-	
+
+	void AimWithPicth();
 protected:
 	
 	virtual void BeginPlay() override;
@@ -156,6 +157,7 @@ protected:
 
 	UFUNCTION()
 	void OnPingTooHigh(bool bPingTooHigh);
+
 
 private:
 	UPROPERTY(VisibleAnywhere, Category = "Weapon Properties")
@@ -198,7 +200,7 @@ private:
 
 	UPROPERTY(VisibleAnywhere, Category = "Weapon Properties")
 		class UWidgetComponent* PickupWidget;
-
+	
 
 	UPROPERTY(EditAnywhere, Category = "Physics")
 		float LinearDamping = 0.1f; // 线性阻尼系数
@@ -228,6 +230,8 @@ public:
 	FORCEINLINE float GetDamage() const { return Damage; }
 	FORCEINLINE float GetHeadShotDamage() const { return HeadShotDamage; }
 	FORCEINLINE ETeam GetTeam() const { return Team; }
+	
+
 };
 
 

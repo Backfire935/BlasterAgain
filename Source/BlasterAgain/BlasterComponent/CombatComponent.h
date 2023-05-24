@@ -151,6 +151,7 @@ private:
 
 	UPROPERTY(Replicated)
 	bool bAiming;
+	
 
  bool bAimButtonPressed = false;
 
