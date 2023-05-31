@@ -116,11 +116,36 @@ public:
 
 	UPROPERTY(EditAnywhere)
 	EFireType FireType;
+	
+	UPROPERTY(EditAnywhere)
+	TSubclassOf<UCameraShakeBase> CameraShakeClass;
 
+	//垂直后坐力表
+	UPROPERTY(EditAnywhere)
+	UCurveFloat* VerticalRecoil;
+	//后坐力
+	float NewVerticalRecoilValue = 0;//新的垂直后座力值
+	float OldVerticalRecoilValue = 0;//之前的
+	float VerticalRecoilAmount = 0;//两个值的差值，是真正的后坐力
+	//每次射击的表中的X坐标
+	float RecoilXCoordPerShoot = 0;
+	
+	//水平后坐力表
+	UPROPERTY(EditAnywhere)
+	UCurveFloat* HorizontalRecoil;
+	float NewHorizontalRecoilValue = 0;//新的垂直后座力值
+	float OldHorizontalRecoilValue = 0;//之前的
+	float HorizontalRecoilAmount = 0;//两个值的差值，是真正的后坐力
+	//每次射击的表中的Y坐标
+	float RecoilYCoordPerShoot = 0;
+	void ResetRecoil();
+	
 	UPROPERTY(EditAnywhere, Category = "Weapon Scatter")
 	bool bUseScatter = false;//是否允许子弹散射
 
 	void AimWithPicth();
+
+	void PlayReloadAnim();
 protected:
 	
 	virtual void BeginPlay() override;
@@ -174,6 +199,11 @@ private:
 
 	UPROPERTY(EditAnywhere, Category = "Weapon Properties")
 	class UAnimationAsset* FireAnimation;
+
+	UPROPERTY(EditAnywhere, Category = "Weapon Properties")
+	UAnimationAsset* ReloadAnimation;
+
+	
 	UPROPERTY(EditAnywhere)
 	TSubclassOf<ABulletShells> BulletShells;
 

@@ -45,6 +45,8 @@ void UBlasterAnimInstance::NativeUpdateAnimation(float DeltaTime)
 	bAiming = BlasterCharacter->IsAiming();
 	//是否被淘汰
 	bElimed = BlasterCharacter->IsElimed();
+	//是否正在换弹
+	bReloading = BlasterCharacter->IsLocallyReloading();
 	//角色扫射状态身体的Yaw偏移
 	FRotator AimRotation =  BlasterCharacter->GetBaseAimRotation();//摄像机的旋转角度
 	FRotator MovementRotation =  UKismetMathLibrary::MakeRotFromX(BlasterCharacter->GetVelocity());//角色的旋转角度
@@ -65,12 +67,16 @@ void UBlasterAnimInstance::NativeUpdateAnimation(float DeltaTime)
 
 	if (bWeaponEquipped && EquippedWeapon && EquippedWeapon->GetWeaponMesh() && BlasterCharacter->GetMesh())//FABRIK IK
 	{
+		
 		LeftHandTransform = EquippedWeapon->GetWeaponMesh()->GetSocketTransform(FName("LeftHandSocket"), ERelativeTransformSpace::RTS_World);//获取武器插槽的三维信息
 		FVector OutPosition;
 		FRotator OutRotation;
 		BlasterCharacter->GetMesh()->TransformToBoneSpace(FName("hand_r"), LeftHandTransform.GetLocation(), FRotator::ZeroRotator, OutPosition, OutRotation);
 		LeftHandTransform.SetLocation(OutPosition);
 		LeftHandTransform.SetRotation(FQuat(OutRotation));//参数类型是const TQuat<T>& NewRotation 所以需要用using FQuat = UE::Math::TQuat<double>;
+
+		bUseFABRIK = BlasterCharacter->GetCombatState() == ECombatState::ECS_Unoccupied;//只要不是普通状态都禁用IK动画
+		//UE_LOG(LogTemp,Warning,TEXT("bUseFABRIK:%d"),bUseFABRIK);
 	}
 }
 

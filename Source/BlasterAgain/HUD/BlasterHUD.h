@@ -45,7 +45,7 @@ public:
 
 	UPROPERTY()
 	class UAnnouncement* Announcement;
-
+		
 	void AddAnnouncement();
 
 	void AddElimAnnouncement(FString Attacker,FString Victim);

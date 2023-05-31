@@ -12,7 +12,7 @@
 #include "BlasterAgain/BlasterTypes/Team.h"
 #include "BlasterAgain/BlasterTypes/TurningInPlace.h"
 #include "Components/TimelineComponent.h"
-
+#include "../../../Plugins/MultiPlayerChatSystem/Source/MultiPlayerChatSystem/Public/ChatWidget.h"
 #include "BlasterCharacter.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnLeftGame);
@@ -28,49 +28,56 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
-	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;//ÉèÖÃÍ¬²½
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;//è®¾ç½®åŒæ­¥
 	
 	virtual void PostInitializeComponents() override;
 
+	
 	void PlayFireMontage(bool bAiming);
 	void PlayReloadMontage();
 	void PlayElimMontage();
 	void PlayThrowGrenadeMontage();
-	virtual void OnRep_ReplicatedMovement() override;//½«½ÇÉ«×ªÏòÓ¦ÓÃµ½Ä£Äâ´úÀíµÄ»Øµ÷
+	virtual void OnRep_ReplicatedMovement() override;//å°†è§’è‰²è½¬å‘åº”ç”¨åˆ°æ¨¡æ‹Ÿä»£ç†çš„å›è°ƒ
 
-	void Elim(bool bPlayerLeftGame);//Õâ¸öÖ»ÔÚserverÉÏµ÷ÓÃ
+	void Elim(bool bPlayerLeftGame);//è¿™ä¸ªåªåœ¨serverä¸Šè°ƒç”¨
 	
 	void DropOrDestroyWeapon(class AWeapon* Weapon);
 	void DropOrDestroyWeapons();
-	//Ïú»ÙÎäÆ÷µÄÎÊÌâ
+	//é”€æ¯æ­¦å™¨çš„é—®é¢˜
 
-	void SetSpawnPoint();//ÉèÖÃ³öÉúµã
+	void SetSpawnPoint();//è®¾ç½®å‡ºç”Ÿç‚¹
 	void OnPlayerStateInitialized();
 
 	UFUNCTION(NetMulticast, Reliable)
-	void MulticastElim(bool bPlayerLeftGame);//Íæ¼ÒÌÔÌ­Ê±
+	void MulticastElim(bool bPlayerLeftGame);//ç©å®¶æ·˜æ±°æ—¶
 
 	virtual void Destroyed() override;
 
 	UPROPERTY(Replicated)
-	bool bDisableGameplay = false;//ÓÃÓÚÔÚÓÎÏ·½«½áÊøÊ±½ûÓÃ,ÒÆ¶¯£¬¿ª»ğ£¬Ãé×¼£¬»»µ¯£¬×°±¸ÎäÆ÷£¬ÌøÔ¾£¬ÏÂ¶×
+	bool bDisableGameplay = false;//ç”¨äºåœ¨æ¸¸æˆå°†ç»“æŸæ—¶ç¦ç”¨,ç§»åŠ¨ï¼Œå¼€ç«ï¼Œç„å‡†ï¼Œæ¢å¼¹ï¼Œè£…å¤‡æ­¦å™¨ï¼Œè·³è·ƒï¼Œä¸‹è¹²
 
-	UFUNCTION(BlueprintImplementableEvent)//¿ÉÔÚÀ¶Í¼»ò¹Ø¿¨À¶Í¼ÖĞÊµÏÖµÄº¯Êı
+	UFUNCTION(BlueprintImplementableEvent)//å¯åœ¨è“å›¾æˆ–å…³å¡è“å›¾ä¸­å®ç°çš„å‡½æ•°
 	void ShowSniperScopeWidget(bool bShowScope);
 
-	void UpdateHUDHealth();//¸üĞÂÉúÃüÖµ
-	void UpdateHUDShield();//¸üĞÂ»¤¶Ü
+	void UpdateHUDHealth();//æ›´æ–°ç”Ÿå‘½å€¼
+	void UpdateHUDShield();//æ›´æ–°æŠ¤ç›¾
 
-	void UpdateHUDAmmo();//¸üĞÂµ¯Ò©HUD
+	void UpdateHUDAmmo();//æ›´æ–°å¼¹è¯HUD
 
 	void SpawnDefaultWeapon();
 	void PlayHitReactMontage();
+
+	UPROPERTY(EditAnywhere, Category = "ChatWidget")
+	TSubclassOf<class UUserWidget> ChatWidgetClass;
+	
+	UPROPERTY()
+	UChatWidget* ChatWidget;//èŠå¤©ç•Œé¢
 	
 	UPROPERTY()
 	TMap<FName, class UBoxComponent*> HitCollisionBoxes;
 
 	UFUNCTION(Server, Reliable)
-	void ServerLeaveGame();//¿Í»§¶ËRPCÇëÇó·şÎñ¶ËÀë¿ªÓÎÏ·
+	void ServerLeaveGame();//å®¢æˆ·ç«¯RPCè¯·æ±‚æœåŠ¡ç«¯ç¦»å¼€æ¸¸æˆ
 
 	FOnLeftGame OnLeftGame;
 
@@ -86,7 +93,7 @@ public:
 protected:
 	virtual void BeginPlay() override;
 
-	///ÊäÈë°ó¶¨
+	///è¾“å…¥ç»‘å®š
 	void MoveForward(const FInputActionValue& InputValue);
 
 	void MoveRight(const FInputActionValue& InputValue);
@@ -99,10 +106,10 @@ protected:
 
 	void OnJumpStoping(const FInputActionValue& InputValue);
 
-	//°´ÏÂ×óshift¾²²½Âı×ß
+	//æŒ‰ä¸‹å·¦shifté™æ­¥æ…¢èµ°
 	void RunSpeedWalk(const FInputActionValue& InputValue);
 
-	//ËÉ¿ª×óshiftÕı³£ĞĞ×ß
+	//æ¾å¼€å·¦shiftæ­£å¸¸è¡Œèµ°
 	void NormalSpeedWalk(const FInputActionValue& InputValue);
 	///
 
@@ -115,23 +122,28 @@ protected:
 	void InputAimingReleased(const FInputActionValue& InputValue);
 
 	void CrouchButtonPressed(const FInputActionValue& InputValue);
-	//°´G¶ªÆúÎäÆ÷
+	//æŒ‰Gä¸¢å¼ƒæ­¦å™¨
 	void InputDropWeapon();
 
-	//°´RÎäÆ÷»»µ¯
+	//æŒ‰Ræ­¦å™¨æ¢å¼¹
 	void InputReload(const FInputActionValue& InputValue);
 
-	//°´VÇĞ»»ÊÓ½Ç
+	//æŒ‰Våˆ‡æ¢è§†è§’
 	void InputShiftView(const FInputActionValue& InputValue);
 
-	//°´VÇĞ»»ÊÓ½Ç
+	//æŒ‰Våˆ‡æ¢è§†è§’
 	void EquipButtonPressed(const FInputActionValue& InputValue);
+
+	
 	///
 
 #pragma endregion InputFunction
 
 public:
-
+	
+	//æŒ‰å›è½¦åˆ‡æ¢è§†è§’
+	void EnterButtonPressed(const FInputActionValue& InputValue);
+	
 #pragma region RPC
 	UFUNCTION(Client, Reliable)
 		void ClientSetName(const FString& Name);
@@ -139,15 +151,15 @@ public:
 	UFUNCTION(Server, Reliable)
 		void	ServerSetPlayerName(const FString& PlayerName);
 
-	//RPC½ÇÉ«¼õËÙ
+	//RPCè§’è‰²å‡é€Ÿ
 	UFUNCTION(Server, Reliable)
 		void ServerRunSpeed();
 
-	//RPC½ÇÉ«»Ö¸´ËÙ¶È
+	//RPCè§’è‰²æ¢å¤é€Ÿåº¦
 	UFUNCTION(Server, Reliable)
 		void ServerNormalSpeedWalk();
 
-	//ÇĞ»»µÚÈıÈË³Æºó¿Í»§¶ËĞı×ª³¯ÏòÔË¶¯
+	//åˆ‡æ¢ç¬¬ä¸‰äººç§°åå®¢æˆ·ç«¯æ—‹è½¬æœå‘è¿åŠ¨
 	UFUNCTION(Server, Reliable)
 		void ServerChangeView();
 
@@ -165,7 +177,7 @@ public:
 
 
 
-	//³õÊ¼ÉèÖÃ½ÇÉ«²ÄÖÊ
+	//åˆå§‹è®¾ç½®è§’è‰²æè´¨
 	UFUNCTION(Server, Reliable)
 		void ServerSetMaterial();
 
@@ -175,27 +187,27 @@ public:
 #pragma endregion RPC
 
 protected:
-	//ÓÎÏ·ÄÚÊó±êÁéÃô¶È
+	//æ¸¸æˆå†…é¼ æ ‡çµæ•åº¦
 	UPROPERTY(BlueprintReadWrite,EditAnywhere, Category = "Input")
 		float TurnRateGamepad = 5.f;
 
 	UPROPERTY(BlueprintReadWrite,EditAnywhere, Category = "Speed")
-		float RunSpeed = 437.5f;//±¼ÅÜËÙ¶È
+		float RunSpeed = 437.5f;//å¥”è·‘é€Ÿåº¦
 
 	UPROPERTY(BlueprintReadWrite,EditAnywhere, Category = "Speed")
-		float RunAimSpeed = 337.5f;//±¼ÅÜÃé×¼ËÙ¶È
+		float RunAimSpeed = 337.5f;//å¥”è·‘ç„å‡†é€Ÿåº¦
 
 	UPROPERTY(BlueprintReadWrite,EditAnywhere, Category = "Speed")
-		float WalkSpeed = 210.f;//ĞĞ×ßËÙ¶È
+		float WalkSpeed = 210.f;//è¡Œèµ°é€Ÿåº¦
 
 	UPROPERTY(BlueprintReadWrite,EditAnywhere, Category = "Speed")
-		float WalkAimSpeed = 180.f;//ĞĞ×ßÃé×¼ËÙ¶È
+		float WalkAimSpeed = 180.f;//è¡Œèµ°ç„å‡†é€Ÿåº¦
 
 	UPROPERTY(BlueprintReadWrite,EditAnywhere, Category = "Speed")
-		float CrouchSpeed = 180.f;//ÏÂ¶×ËÙ¶È
+		float CrouchSpeed = 180.f;//ä¸‹è¹²é€Ÿåº¦
 
 	UPROPERTY(BlueprintReadWrite,EditAnywhere, Category = "Speed")
-		float CrouchAimSpeed = 150.f;//ÏÂ¶×Ãé×¼ËÙ¶È
+		float CrouchAimSpeed = 150.f;//ä¸‹è¹²ç„å‡†é€Ÿåº¦
 
 	
 
@@ -203,19 +215,19 @@ protected:
 	bool IsRunning = false;
 
 	void AimOffset(float DeltaTime);
-	//»ñÈ¡YawµÄoffset
+	//è·å–Yawçš„offset
 	void SimProxiesTurn();
 	float AO_Yaw;
 	float AO_Pitch;
 	float	InterpAO_Yaw;
 	FRotator StartingAimRotation;
-	void TurnInPlace(float DeltaTime);//×ªÏòº¯Êı
-	 ETurningInPlace TurningInPlace;//×ªÏòµÄÃ¶¾ÙÀàĞÍ
+	void TurnInPlace(float DeltaTime);//è½¬å‘å‡½æ•°
+	 ETurningInPlace TurningInPlace;//è½¬å‘çš„æšä¸¾ç±»å‹
 
 	UFUNCTION()
 	void ReceiveDamage(AActor *DamagedActor, float Damage, const UDamageType * DamageType, class AController* InstigatorController, AActor * DamageCauser);
 
-	void PollInit();//³õÊ¼»¯Ïà¹ØÀà
+	void PollInit();//åˆå§‹åŒ–ç›¸å…³ç±»
 	
 
 
@@ -309,24 +321,24 @@ private:
 	class ULagCompensationComponent* LagCompensationComp;
 
 	UPROPERTY(BlueprintReadWrite,EditAnywhere, Category = "CharacterComponent",meta = (AllowPrivateAccess = "true"))
-	bool bUseCombatComp = true;//ÊÇ·ñ´´½¨Õ½¶·×é¼ş£¬°´Ğè´´½¨
+	bool bUseCombatComp = true;//æ˜¯å¦åˆ›å»ºæˆ˜æ–—ç»„ä»¶ï¼ŒæŒ‰éœ€åˆ›å»º
 	
 	UPROPERTY(BlueprintReadWrite,EditAnywhere, Category = "CharacterComponent",meta = (AllowPrivateAccess = "true"))
-	bool bUseBuffComp = true;//ÊÇ·ñ´´½¨Buff×é¼ş£¬°´Ğè´´½¨
+	bool bUseBuffComp = true;//æ˜¯å¦åˆ›å»ºBuffç»„ä»¶ï¼ŒæŒ‰éœ€åˆ›å»º
 
 	UPROPERTY(BlueprintReadWrite,EditAnywhere, Category = "CharacterComponent",meta = (AllowPrivateAccess = "true"))
-	bool bUseLagCompensationComp = true;//ÊÇ·ñ´´½¨ÑÓ³Ù²¹³¥×é¼ş£¬°´Ğè´´½¨
+	bool bUseLagCompensationComp = true;//æ˜¯å¦åˆ›å»ºå»¶è¿Ÿè¡¥å¿ç»„ä»¶ï¼ŒæŒ‰éœ€åˆ›å»º
 	
 	UPROPERTY(BlueprintReadWrite,EditAnywhere, Category = "EffectMaterials",meta = (AllowPrivateAccess = "true"))
-		UMaterialInterface* TransparentMaterial;//Í¸Ã÷²ÄÖÊ
+		UMaterialInterface* TransparentMaterial;//é€æ˜æè´¨
 
 	UPROPERTY(BlueprintReadWrite,EditAnywhere, Category = "EffectMaterials",meta = (AllowPrivateAccess = "true"))
-		UMaterialInterface* NormalMaterialUp;//ÉÏ°ëÉíÕı³£²ÄÖÊ
+		UMaterialInterface* NormalMaterialUp;//ä¸ŠåŠèº«æ­£å¸¸æè´¨
 
 	UPROPERTY(BlueprintReadWrite,EditAnywhere, Category = "EffectMaterials",meta = (AllowPrivateAccess = "true"))
-		UMaterialInterface* NormalMaterialDown;//ÏÂ°ëÉíÕı³£²ÄÖÊ
+		UMaterialInterface* NormalMaterialDown;//ä¸‹åŠèº«æ­£å¸¸æè´¨
 
-		//¼¸ÖÖÃÉÌ«Ææ¶¯»­
+		//å‡ ç§è’™å¤ªå¥‡åŠ¨ç”»
 		UPROPERTY(EditAnywhere, category = Combat )
 		class UAnimMontage* FireWeaponMontage;
 
@@ -345,13 +357,13 @@ private:
 		void HideCameraIfCharacterClose();
 
 		UPROPERTY(EditAnywhere, category = Combat)
-		float CameraThreshold = 200.f;//Ïà»úãĞÖµ
+		float CameraThreshold = 200.f;//ç›¸æœºé˜ˆå€¼
 
 		bool bRotateRootBone;
 
-		float TurnThreshold = 3.5f;//´ïµ½×ªÏòÒªÇóµÄ²îÖµ½Ç¶È
+		float TurnThreshold = 3.5f;//è¾¾åˆ°è½¬å‘è¦æ±‚çš„å·®å€¼è§’åº¦
 
-		FRotator ProxyRotationLastFrame;//ÉÏÒ»Ö¡µÄ´úÀíĞı×ª
+		FRotator ProxyRotationLastFrame;//ä¸Šä¸€å¸§çš„ä»£ç†æ—‹è½¬
 		FRotator ProxyRotation;
 
 		float ProxyYaw;
@@ -360,7 +372,7 @@ private:
 
 		float CalculateSpeed();
 
-	//ÉúÃüÖµ
+	//ç”Ÿå‘½å€¼
 		UPROPERTY(EditAnywhere, Category = "Player Stats")
 		float MaxHealth = 100.f;
 
@@ -370,7 +382,7 @@ private:
 		UFUNCTION()
 		void OnRep_Health(float LastHealth);
 
-	//»¤¶Ü
+	//æŠ¤ç›¾
 		UPROPERTY(EditAnywhere, Category = "Player Stats")
 			float MaxShield = 100.f;
 
@@ -401,22 +413,22 @@ private:
 		UPROPERTY(EditAnywhere)
 			UCurveFloat* DissolveCurve;
 
-		//ÈÜ½âĞ§¹û
-		FOnTimelineFloat DissolveTrack;//ÈÜ½âĞ§¹ûµÄÊ±¼äÖá
+		//æº¶è§£æ•ˆæœ
+		FOnTimelineFloat DissolveTrack;//æº¶è§£æ•ˆæœçš„æ—¶é—´è½´
 
 		UFUNCTION()
 		void UpdateDissolveMaterial(float DissolveValue);
 		void StartDissolve();
 
-		//ÔÚÔËĞĞÊ±¿ÉÒÔ¸Ä±äµÄ¶¯Ì¬²ÄÖÊÊµÀı
+		//åœ¨è¿è¡Œæ—¶å¯ä»¥æ”¹å˜çš„åŠ¨æ€æè´¨å®ä¾‹
 		UPROPERTY(VisibleAnywhere, category = Elim)
-		UMaterialInstanceDynamic* DynamicDissolveMaterialInstance;//¶¯Ì¬ÈÜ½â²ÄÖÊÊµÀı
+		UMaterialInstanceDynamic* DynamicDissolveMaterialInstance;//åŠ¨æ€æº¶è§£æè´¨å®ä¾‹
 
-		//ÔÚÀ¶Í¼ÖĞÉèÖÃµÄ¶¯Ì¬²ÄÖÊÊµÀı
+		//åœ¨è“å›¾ä¸­è®¾ç½®çš„åŠ¨æ€æè´¨å®ä¾‹
 		UPROPERTY(VisibleAnywhere, Category = Elim)
 		UMaterialInstance* DissolveMaterialInstance;
 
-		//¶ÓÎéÑÕÉ«
+		//é˜Ÿä¼é¢œè‰²
 	UPROPERTY(EditAnywhere, Category = Elim)
 		UMaterialInstance* RedDissolveMatInst;
 
@@ -432,7 +444,7 @@ private:
 	UPROPERTY(EditAnywhere, Category = Elim)
 		UMaterialInstance* OriginalMaterial;
 
-		//ÌÔÌ­Ğ§¹û
+		//æ·˜æ±°æ•ˆæœ
 		UPROPERTY(EditAnywhere)
 		UParticleSystem* ElimBotEffect;
 
@@ -450,7 +462,7 @@ private:
 		UPROPERTY()
 		class UNiagaraComponent* CrownComponent;
 
-	//Í¶ÖÀÎï
+	//æŠ•æ·ç‰©
 	UPROPERTY(VisibleAnywhere)
 		UStaticMeshComponent* AttachedGrenade;
 
@@ -460,85 +472,89 @@ private:
 	UPROPERTY()
 	class ABlasterGameMode* BlasterGameMode;
 
-	//ÊÇ·ñ¿ªÆôÓÑ¾üÉËº¦
+	//æ˜¯å¦å¼€å¯å‹å†›ä¼¤å®³
 	UPROPERTY(EditAnywhere, Category = "Team")
 	bool bTeamDamage =false;
 
-	//ÓÑ¾üÉËº¦±¶ÂÊ
+	//å‹å†›ä¼¤å®³å€ç‡
 	UPROPERTY(EditAnywhere, Category = "Team")
 		float TeamDamageRate = 1.f;
 
 
 #pragma region EnhancedInput
-	///ÔöÇ¿ÊäÈë
-	//Á½¸öÓ³Éä±í
+	///å¢å¼ºè¾“å…¥
+	//ä¸¤ä¸ªæ˜ å°„è¡¨
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "EnhancedInput | Context", meta = (AllowPrivateAccess = "true"))
 		TObjectPtr<UInputMappingContext> IMC_Action;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "EnhancedInput | Context", meta = (AllowPrivateAccess = "true"))
 		TObjectPtr<UInputMappingContext> IMC_MoveBase;
 
-	//ÉÏÏÂÒÆ¶¯
+	//ä¸Šä¸‹ç§»åŠ¨
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "EnhancedInput | Action", meta = (AllowPrivateAccess = "true"))
 		TObjectPtr<UInputAction> IA_MoveForward;
 
-	//×óÓÒÒÆ¶¯
+	//å·¦å³ç§»åŠ¨
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "EnhancedInput | Action", meta = (AllowPrivateAccess = "true"))
 		TObjectPtr<UInputAction> IA_MoveRight;
 
-	//ÉÏÏÂÊÓ½Ç
+	//ä¸Šä¸‹è§†è§’
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "EnhancedInput | Action", meta = (AllowPrivateAccess = "true"))
 		TObjectPtr<UInputAction> IA_LookUpRate;
 
-	//×óÓÒÊÓ½Ç
+	//å·¦å³è§†è§’
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "EnhancedInput | Action", meta = (AllowPrivateAccess = "true"))
 		TObjectPtr<UInputAction>  IA_LookRightRate;
 
-	//ÌøÔ¾
+	//è·³è·ƒ
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "EnhancedInput | Action", meta = (AllowPrivateAccess = "true"))
 		TObjectPtr<UInputAction> IA_Jump;
 
 
-	//¿ª»ğ
+	//å¼€ç«
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "EnhancedInput | Action", meta = (AllowPrivateAccess = "true"))
 		TObjectPtr<UInputAction> IA_FirePressed;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "EnhancedInput | Action", meta = (AllowPrivateAccess = "true"))
 		TObjectPtr<UInputAction> IA_FireReleased;
 
-	//¿ª¾µ
+	//å¼€é•œ
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "EnhancedInput | Action", meta = (AllowPrivateAccess = "true"))
 		TObjectPtr<UInputAction> IA_AimingPressed;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "EnhancedInput | Action", meta = (AllowPrivateAccess = "true"))
 		TObjectPtr<UInputAction> IA_AimingReleased;
 
-	//°´ÏÂshift¾²²½¼õËÙ
+	//æŒ‰ä¸‹shifté™æ­¥å‡é€Ÿ
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "EnhancedInput | Action", meta = (AllowPrivateAccess = "true"))
 		TObjectPtr<UInputAction> IA_ShiftPressed;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "EnhancedInput | Action", meta = (AllowPrivateAccess = "true"))
 		TObjectPtr<UInputAction> IA_ShiftReleased;
 
-	//°´ÏÂCtrlÏÂ¶×
+	//æŒ‰ä¸‹Ctrlä¸‹è¹²
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "EnhancedInput | Action", meta = (AllowPrivateAccess = "true"))
 		TObjectPtr<UInputAction> IA_CrouchPressed;
 
-	//°´ÏÂG¶ªÆúÎäÆ÷
+	//æŒ‰ä¸‹Gä¸¢å¼ƒæ­¦å™¨
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "EnhancedInput | Action", meta = (AllowPrivateAccess = "true"))
 		TObjectPtr<UInputAction> IA_DropWeapon;
 
-	//°´ÏÂRÎäÆ÷»»µ¯
+	//æŒ‰ä¸‹Ræ­¦å™¨æ¢å¼¹
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "EnhancedInput | Action", meta = (AllowPrivateAccess = "true"))
 		TObjectPtr<UInputAction> IA_Reload;
 
-	//°´ÏÂVÇĞ»»ÊÓ½Ç
+	//æŒ‰ä¸‹Våˆ‡æ¢è§†è§’
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "EnhancedInput | Action", meta = (AllowPrivateAccess = "true"))
 		TObjectPtr<UInputAction> IA_ChangeView;
 
-	//°´ÏÂFÊ°È¡ÎäÆ÷
+	//æŒ‰ä¸‹Fæ‹¾å–æ­¦å™¨
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "EnhancedInput | Action", meta = (AllowPrivateAccess = "true"))
 		TObjectPtr<UInputAction> IA_Equip;
+
+	//æŒ‰ä¸‹Enterå›å¤æ–‡å­—æ¶ˆæ¯
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "EnhancedInput | Action", meta = (AllowPrivateAccess = "true"))
+		TObjectPtr<UInputAction> IA_Enter;
 	///
 #pragma endregion EnhancedInput
 
@@ -551,7 +567,7 @@ public:
 
 	bool IsAiming();
 	
-	bool IsFirstPerson();//»ñÈ¡ÊÇ·ñÊÇµÚÒ»ÈË³Æ
+	bool IsFirstPerson();//è·å–æ˜¯å¦æ˜¯ç¬¬ä¸€äººç§°
 
 	AWeapon* GetEquippedWeapon();
 
@@ -564,14 +580,14 @@ public:
 	ETeam GetTeam();
 	void SetHoldingTheFlag(bool bHolding);
 	
-	FORCEINLINE bool GetIsCrouch() { return bIsCrouched; }//»ñÈ¡ÊÇ·ñÊÇÏÂ¶×µÄ
-	FORCEINLINE float GetWalkSpeed() { return WalkSpeed; }//ĞĞ×ßËÙ¶È
-	FORCEINLINE float GetRunSpeed() { return RunSpeed; }//±¼ÅÜËÙ¶È
-	FORCEINLINE float GetCrouchSpeed() { return CrouchSpeed; }//ÏÂ¶×ËÙ¶È
-	FORCEINLINE float GetRunAimSpeed() { return RunAimSpeed; }//±¼ÅÜÃé×¼ËÙ¶È
-	FORCEINLINE float GetCrouchAimSpeed() { return CrouchAimSpeed; }//ÏÂ¶×Ãé×¼ËÙ¶È
-	FORCEINLINE float GetWalkAimSpeed() { return WalkAimSpeed; }//ĞĞ×ßÃé×¼ËÙ¶È
-	FORCEINLINE float GetIsRunning() { return IsRunning; }//ÊÇ·ñ±¼ÅÜ
+	FORCEINLINE bool GetIsCrouch() { return bIsCrouched; }//è·å–æ˜¯å¦æ˜¯ä¸‹è¹²çš„
+	FORCEINLINE float GetWalkSpeed() { return WalkSpeed; }//è¡Œèµ°é€Ÿåº¦
+	FORCEINLINE float GetRunSpeed() { return RunSpeed; }//å¥”è·‘é€Ÿåº¦
+	FORCEINLINE float GetCrouchSpeed() { return CrouchSpeed; }//ä¸‹è¹²é€Ÿåº¦
+	FORCEINLINE float GetRunAimSpeed() { return RunAimSpeed; }//å¥”è·‘ç„å‡†é€Ÿåº¦
+	FORCEINLINE float GetCrouchAimSpeed() { return CrouchAimSpeed; }//ä¸‹è¹²ç„å‡†é€Ÿåº¦
+	FORCEINLINE float GetWalkAimSpeed() { return WalkAimSpeed; }//è¡Œèµ°ç„å‡†é€Ÿåº¦
+	FORCEINLINE float GetIsRunning() { return IsRunning; }//æ˜¯å¦å¥”è·‘
 	FORCEINLINE float GetAO_Yaw() const { return AO_Yaw;}
 	FORCEINLINE float GetAO_Pitch() const { return AO_Pitch;}
 	

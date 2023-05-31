@@ -45,6 +45,11 @@ void ABlasterPlayerController::GetLifetimeReplicatedProps(TArray<FLifetimeProper
 
 }
 
+void ABlasterPlayerController::PlayerCameraShake(TSubclassOf<UCameraShakeBase> CameraShake)
+{
+	ClientPlayCameraShake(CameraShake,1,ECameraShakePlaySpace::CameraLocal,FRotator::ZeroRotator);
+}
+
 void ABlasterPlayerController::BroadcastElim(APlayerState* Attacker, APlayerState* Victim)
 {
 	ClientElimAnnouncement(Attacker, Victim);
@@ -795,6 +800,12 @@ FString ABlasterPlayerController::GetTeamsInfoText( ABlasterGameState* BlasterGa
 	}
 
 	return InfoTextString;
+}
+
+void ABlasterPlayerController::SetInputWord()
+{
+	BlasterHUD = BlasterHUD == nullptr ? Cast<ABlasterHUD>(GetHUD()) : BlasterHUD;
+	
 }
 
 void ABlasterPlayerController::HighPingWarning(float ping)//播放高ping警告动画

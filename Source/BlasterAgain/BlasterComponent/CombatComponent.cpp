@@ -38,7 +38,8 @@ void UCombatComponent::BeginPlay()
 			{
 				InitializeCarriedAmmo();//初始化备弹
 			}
-	
+
+		
 	}
 }
 
@@ -148,8 +149,12 @@ void UCombatComponent::EquipWeapon(AWeapon* WeaponToEquip)
 		HandSocket->AttachActor(EquippedWeapon, Character->GetMesh()); //在插槽上将武器附加到身体上
 	}
 	EquippedWeapon->SetOwner(Character);
+	bCanFire = true;
+	bLocallyReloading = false;
+	
 	UpdateAmmoValues();
 	UpdateCarriedAmmo();
+	
 	//Character->GetCharacterMovement()->bOrientRotationToMovement = false;
 	//Character->bUseControllerRotationYaw = true;
 	
@@ -231,6 +236,7 @@ void UCombatComponent::Reload()
 		ServerReload();
 		HandleReload();
 		bLocallyReloading = true;
+		
 		}
 }
 
@@ -242,6 +248,7 @@ void UCombatComponent::FinishReload()
 	{
 		CombatState = ECombatState::ECS_Unoccupied;
 		UpdateAmmoValues();
+		UpdateCarriedAmmo();
 		UE_LOG(LogTemp, Warning, TEXT("FinishReload"));
 	}
 	if (bFireButtonPressed)
@@ -254,7 +261,7 @@ void UCombatComponent::FireButtonPressed(bool bPressed)
 {
 	bFireButtonPressed = bPressed;
 
-	if (bFireButtonPressed && EquippedWeapon)//如果不加检查武器会导致点击窗口的时候因为没有武器而导致bPressed=false而无法开火
+	if (bFireButtonPressed && EquippedWeapon && !bLocallyReloading)//如果不加检查武器会导致点击窗口的时候因为没有武器而导致bPressed=false而无法开火
 		{
 			Fire();
 		}
@@ -303,6 +310,42 @@ void UCombatComponent::PickupAmmo(EWeaponType WeaponType, int32 AmmoAmount)
 	{
 		Reload();//如果武器没子弹了且此时捡到了子弹，自动装填
 	}
+}
+
+void UCombatComponent::WeaponRecoil()
+{
+	UCurveFloat* VerticalRecoilCurve = nullptr;
+	UCurveFloat* HorizontalRecoilCurve = nullptr;
+	if(EquippedWeapon->VerticalRecoil)
+	{
+		VerticalRecoilCurve = EquippedWeapon->VerticalRecoil;
+		EquippedWeapon->RecoilXCoordPerShoot += 0.1;
+		EquippedWeapon->NewVerticalRecoilValue = VerticalRecoilCurve->GetFloatValue(EquippedWeapon->RecoilXCoordPerShoot);
+
+		EquippedWeapon->VerticalRecoilAmount = EquippedWeapon->NewVerticalRecoilValue - EquippedWeapon->OldVerticalRecoilValue;;
+		EquippedWeapon->OldVerticalRecoilValue = EquippedWeapon->NewVerticalRecoilValue;
+	}
+	
+	if(EquippedWeapon->HorizontalRecoil)
+	{
+		HorizontalRecoilCurve = EquippedWeapon->HorizontalRecoil;
+		EquippedWeapon->RecoilYCoordPerShoot += 0.1;
+		EquippedWeapon->NewHorizontalRecoilValue = HorizontalRecoilCurve->GetFloatValue(EquippedWeapon->RecoilYCoordPerShoot);
+
+		EquippedWeapon->HorizontalRecoilAmount = EquippedWeapon->NewHorizontalRecoilValue - EquippedWeapon->OldHorizontalRecoilValue;;
+		
+		EquippedWeapon->OldHorizontalRecoilValue = EquippedWeapon->NewHorizontalRecoilValue;
+	}
+
+	if(Controller)
+	{
+		FRotator ControllerRotator = Controller->GetControlRotation();
+		Controller->SetControlRotation(FRotator(
+			ControllerRotator.Pitch + EquippedWeapon->VerticalRecoilAmount,
+			ControllerRotator.Yaw + EquippedWeapon->HorizontalRecoilAmount,
+				ControllerRotator.Roll));
+	}
+	
 }
 
 void UCombatComponent::ServerLuncherGrenade_Implementation(const FVector_NetQuantize& Target)
@@ -417,7 +460,7 @@ void UCombatComponent::TraceUnderCrosshairs(FHitResult& TraceHitResult)
 		{
 			float DistanceToCharacter = (Character->GetActorLocation() - Start).Size();
 			Start += CrosshairWorldDirection * (DistanceToCharacter + 100.f);
-			DrawDebugSphere(GetWorld(), Start, 16.f, 12, FColor::Red, false);
+			//DrawDebugSphere(GetWorld(), Start, 16.f, 12, FColor::Red, false);
 		}
 
 		FVector End = Start + CrosshairWorldDirection * TraceLength;//子弹射出去停止的位置，相当于最大射程
@@ -520,6 +563,12 @@ void UCombatComponent::HandleReload()
 {
 	if(Character)
 	{
+		//播放武器换弹蒙太奇
+		if(EquippedWeapon)
+		{
+			EquippedWeapon->PlayReloadAnim();
+		}
+		//播放角色换弹蒙太奇
 		Character->PlayReloadMontage();
 	}
 }
@@ -851,6 +900,11 @@ void UCombatComponent::LocalFire(const FVector_NetQuantize& TraceHitTarget)
 			//开火需要播放两种动画，一种是角色的开火动作动画，还有一种是武器的动作动画
 			Character->PlayFireMontage(bAiming);//角色类播放开火蒙太奇动画
 			EquippedWeapon->Fire(TraceHitTarget);//武器类触发开火事件
+			if(Controller && EquippedWeapon->CameraShakeClass)
+			{
+				Controller->PlayerCameraShake(EquippedWeapon->CameraShakeClass);
+			}
+			WeaponRecoil();
 		}
 }
 
@@ -860,10 +914,15 @@ void UCombatComponent::LocalShotgunFire(const TArray<FVector_NetQuantize>& Trace
 	if(ShotGun == nullptr || Character == nullptr) return;
 	if (CombatState == ECombatState::ECS_Reloading || CombatState == ECombatState::ECS_Unoccupied)
 	{
+		bLocallyReloading = false;
 		Character->PlayFireMontage(bAiming);//角色类播放开火蒙太奇动画
 		ShotGun->FireShotgun(TraceHitTarget);
 		CombatState = ECombatState::ECS_Unoccupied;//将武器状态重新设置为 普通状态
-
+		if(Controller && EquippedWeapon->CameraShakeClass)
+		{
+			Controller->PlayerCameraShake(EquippedWeapon->CameraShakeClass);
+		}
+			WeaponRecoil();
 	}
 }
 

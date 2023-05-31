@@ -28,7 +28,8 @@ public class MultiPlayerChatSystem : ModuleRules
 				"Core",
 				"UMG",
 				"Slate",
-				"SlateCore"
+				"SlateCore",
+				"InputCore"
 				// ... add other public dependencies that you statically link with here ...
 			}
 			);

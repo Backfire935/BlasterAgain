@@ -18,6 +18,8 @@ class BLASTERAGAIN_API ABlasterPlayerController : public APlayerController
 public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;//设置同步
 
+	void PlayerCameraShake(TSubclassOf<UCameraShakeBase> CameraShake);
+
 	void SetHUDHealth(float Health, float MaxHealth);//设置生命值
 
 	void SetHUDShield(float Shield, float MaxShield);//设置生命值
@@ -114,6 +116,8 @@ public:
 	FString GetInfoText(const TArray<class ABlasterPlayerState*>& Players);
 	FString GetTeamsInfoText(class ABlasterGameState * BlasterGameState);
 
+	void SetInputWord();
+	
 private:
 	/// <summary>
 	/// 返回主菜单

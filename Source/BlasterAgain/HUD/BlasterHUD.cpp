@@ -6,6 +6,7 @@
 #include "Announcement.h"
 #include "CharacterOverlay.h"
 #include "ElimAnnouncement.h"
+#include "BlasterAgain/Character/BlasterCharacter.h"
 #include "Blueprint/UserWidget.h"
 #include "Blueprint/WidgetLayoutLibrary.h"
 #include "Components/CanvasPanelSlot.h"
@@ -14,7 +15,7 @@
 void ABlasterHUD::DrawHUD()
 {
 	Super::DrawHUD();
-
+	
 	FVector2D ViewportSize;
 	if (GEngine)
 	{
@@ -22,35 +23,41 @@ void ABlasterHUD::DrawHUD()
 		const FVector2D ViewportCenter(ViewportSize.X /2.f, ViewportSize.Y / 2.f);
 		float SpreadScaled = CrosshairSpreadMax * HUDPackage.CrosshairsSpread;//准心偏移的浮点量
 		FVector2D Spread;//准心偏移坐标
-		if (HUDPackage.CrosshairsCenter)//开始画上下左右和中心的准心纹理
+		
+		ABlasterCharacter * OwnerCharacter = Cast<ABlasterCharacter>(GetOwningPlayerController()->GetCharacter());
+		if(OwnerCharacter && !OwnerCharacter->IsAiming())
 		{
-			Spread = FVector2D(0.f, 0.f);
-			DrawCrosshair(HUDPackage.CrosshairsCenter, ViewportCenter, Spread, HUDPackage.CrosshairsColor);
-		}
+			if (HUDPackage.CrosshairsCenter)//开始画上下左右和中心的准心纹理
+				{
+				Spread = FVector2D(0.f, 0.f);
+				DrawCrosshair(HUDPackage.CrosshairsCenter, ViewportCenter, Spread, HUDPackage.CrosshairsColor);
+				}
 
-		if (HUDPackage.CrosshairsLeft)
-		{
-			Spread = FVector2D(-SpreadScaled, 0.f);
-			DrawCrosshair(HUDPackage.CrosshairsLeft, ViewportCenter, Spread, HUDPackage.CrosshairsColor);
-		}
+			if (HUDPackage.CrosshairsLeft)
+			{
+				Spread = FVector2D(-SpreadScaled, 0.f);
+				DrawCrosshair(HUDPackage.CrosshairsLeft, ViewportCenter, Spread, HUDPackage.CrosshairsColor);
+			}
 
-		if (HUDPackage.CrosshairsRight)
-		{
-			Spread = FVector2D(SpreadScaled, 0.f);
-			DrawCrosshair(HUDPackage.CrosshairsRight, ViewportCenter, Spread, HUDPackage.CrosshairsColor);
-		}
+			if (HUDPackage.CrosshairsRight)
+			{
+				Spread = FVector2D(SpreadScaled, 0.f);
+				DrawCrosshair(HUDPackage.CrosshairsRight, ViewportCenter, Spread, HUDPackage.CrosshairsColor);
+			}
 
-		if (HUDPackage.CrosshairsTop)
-		{
-			Spread = FVector2D(0.f, -SpreadScaled);
-			DrawCrosshair(HUDPackage.CrosshairsTop, ViewportCenter, Spread, HUDPackage.CrosshairsColor);
-		}
+			if (HUDPackage.CrosshairsTop)
+			{
+				Spread = FVector2D(0.f, -SpreadScaled);
+				DrawCrosshair(HUDPackage.CrosshairsTop, ViewportCenter, Spread, HUDPackage.CrosshairsColor);
+			}
 
-		if (HUDPackage.CrosshairsBottom)
-		{
-			Spread = FVector2D(0.f, SpreadScaled); 
-			DrawCrosshair(HUDPackage.CrosshairsBottom, ViewportCenter, Spread, HUDPackage.CrosshairsColor);
+			if (HUDPackage.CrosshairsBottom)
+			{
+				Spread = FVector2D(0.f, SpreadScaled); 
+				DrawCrosshair(HUDPackage.CrosshairsBottom, ViewportCenter, Spread, HUDPackage.CrosshairsColor);
+			}
 		}
+		
 
 	}
 }

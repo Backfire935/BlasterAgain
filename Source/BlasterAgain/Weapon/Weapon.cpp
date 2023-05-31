@@ -68,11 +68,6 @@ void AWeapon::BeginPlay()
 		PickupWidget->SetVisibility(false);
 	}
 	
-	//AimActor = GetWorld()->SpawnActor<AActor>();
-	FActorSpawnParameters SpawnParameters;
-	SpawnParameters.Owner = this;
-	SpawnParameters.Instigator = GetInstigator();
-	SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
 	
 }
@@ -145,6 +140,21 @@ void AWeapon::Tick(float DeltaTime)
 }
 
 
+void AWeapon::ResetRecoil()
+{
+	 NewVerticalRecoilValue = 0;//新的垂直后座力值
+	 OldVerticalRecoilValue = 0;//之前的
+	 VerticalRecoilAmount = 0;//两个值的差值，是真正的后坐力
+	//每次射击的X坐标
+	 RecoilXCoordPerShoot = 0;
+
+	NewHorizontalRecoilValue = 0;//新的垂直后座力值
+	 OldHorizontalRecoilValue = 0;//之前的
+	 HorizontalRecoilAmount = 0;//两个值的差值，是真正的后坐力
+	//每次射击的表中的Y坐标
+	 RecoilYCoordPerShoot = 0;
+}
+
 void AWeapon::AimWithPicth()
 {
 	APlayerController* PlayerController = GetWorld()->GetFirstPlayerController();
@@ -164,6 +174,14 @@ void AWeapon::AimWithPicth()
 		}
 	}
 
+}
+
+void AWeapon::PlayReloadAnim()
+{
+	if(ReloadAnimation)
+	{
+		WeaponMesh->PlayAnimation(ReloadAnimation, false);//第二个参数是循环播放的参数，设置为false
+	}
 }
 
 void AWeapon::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -249,7 +267,6 @@ void AWeapon::ClientUpdateAmmo_Implementation(int32 ServerAmmo)
 void AWeapon::SpendRound()
 {
 	Ammo = FMath::Clamp(Ammo - 1 , 0 , MagCapacity);//让ammo限制在0到最大备弹数之间
-	SetHUDAmmo();
 	if(HasAuthority())
 	{
 		ClientUpdateAmmo(Ammo);
@@ -258,6 +275,7 @@ void AWeapon::SpendRound()
 	{
 		++Sequence;
 	}
+	SetHUDAmmo();
 }
 
 void AWeapon::SetWeaponState(EWeaponState State)

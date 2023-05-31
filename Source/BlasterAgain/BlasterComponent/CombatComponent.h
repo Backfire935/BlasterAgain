@@ -59,6 +59,8 @@ public:
 
 	void PickupAmmo(EWeaponType WeaponType,int32 AmmoAmount);
 
+	void WeaponRecoil();
+
 	bool bLocallyReloading = false;
 protected:
 

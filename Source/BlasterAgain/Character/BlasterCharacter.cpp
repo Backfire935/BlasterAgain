@@ -26,9 +26,9 @@
 #include "Sound/SoundCue.h"
 #include "NiagaraComponent.h"
 #include "NiagaraFunctionLibrary.h"
+
 #include "BlasterAgain/BlasterAgain.h"
 #include "BlasterAgain/GameState/BlasterGameState.h"
-#include "BlasterAgain/PlayerController/FPSAimCamera.h"
 #include "BlasterAgain/PlayerStart/TeamPlayerStart.h"
 #include "Components/BoxComponent.h"
 #pragma region Init
@@ -51,7 +51,8 @@ ABlasterCharacter::ABlasterCharacter()
 
 	//创建第三人称摄像机
 	TPSCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("TPSCamera"));
-	TPSCamera->SetupAttachment(CameraBoom);
+	TPSCamera->AttachToComponent(GetMesh(), FAttachmentTransformRules::KeepWorldTransform,FName(TEXT("TPSCameraSocket")));
+	//TPSCamera->SetupAttachment(CameraBoom);
 	
 	//bUseControllerRotationYaw = false;
 	//GetCharacterMovement()->bOrientRotationToMovement = true;
@@ -101,7 +102,8 @@ ABlasterCharacter::ABlasterCharacter()
 	GetMesh()->SetCollisionObjectType(ECC_SkeletalMesh);//将人物的碰撞类型设置为自定义的宏SkeletalMesh类型
 	GetMesh()->SetCollisionResponseToChannel(ECollisionChannel::ECC_Camera, ECollisionResponse::ECR_Ignore);//设置对相机组件的碰撞忽略
 	GetMesh()->SetCollisionResponseToChannel(ECollisionChannel::ECC_Visibility, ECollisionResponse::ECR_Block);//设置对射线检测的碰撞
-
+	GetMesh()->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::AlwaysTickPoseAndRefreshBones;//打开在服务端刷新Tick姿势和骨骼
+	
 	TurningInPlace = ETurningInPlace::ETIP_NotTurning;//上来先初始化下旋转方向，让它别动
 
 	NetUpdateFrequency = 66.f;//网络更新频率，每秒66次
@@ -221,6 +223,9 @@ ABlasterCharacter::ABlasterCharacter()
 	{
 		GetMesh()->VisibilityBasedAnimTickOption=   EVisibilityBasedAnimTickOption::AlwaysTickPoseAndRefreshBones;
 	}*/
+	
+	
+	
 }
 
 void ABlasterCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -253,10 +258,18 @@ void ABlasterCharacter::BeginPlay()
 	}
 	if(AttachedGrenade)//初始化设置手雷的可视性为fasle
 		{
-		AttachedGrenade->SetVisibility(false);
+			AttachedGrenade->SetVisibility(false);
 		}
 	///
 
+	APlayerController* PlayerController = GetGameInstance()->GetFirstLocalPlayerController();//获取拥有的玩家控制器
+	if (PlayerController && ChatWidgetClass)
+	{
+		ChatWidget = CreateWidget<UChatWidget>(PlayerController, ChatWidgetClass);//创建控件到角色上
+		ChatWidget->AddToViewport();
+		UE_LOG(LogTemp,Warning,TEXT("111"));
+	}
+	
 	//这段要一直放在函数最后
 	if(HasAuthority())
 	{
@@ -268,11 +281,7 @@ void ABlasterCharacter::BeginPlay()
 	//如果是客户端执行，让服务端去改变，再传递给各个客户端来完成同步的效果
 	ServerChangeView();
 	ServerChangeView();
-
-	FActorSpawnParameters SpawnParameters;
-	SpawnParameters.Owner = this;
-	SpawnParameters.Instigator = GetInstigator();
-	SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	
 	
 	
 }
@@ -397,10 +406,21 @@ void ABlasterCharacter::PlayElimMontage()
 	//GetMesh()->SetSimulatePhysics(true);
 	//开启重力
 	//GetMesh()->SetEnableGravity(true);
+	//材质
+	if(IsLocallyControlled())
+	{
+		// 获取当前材质插槽的数量 
+		int32 MaterialSlotIndex0 = GetMesh()->GetMaterialIndex("18 - Default");//下半身
+		int32 MaterialSlotIndex1 = GetMesh()->GetMaterialIndex("12 - Default");//上半身
+		// 设置为正常的材质
+		GetMesh()->SetMaterial(MaterialSlotIndex0, NormalMaterialDown);
+		GetMesh()->SetMaterial(MaterialSlotIndex1, NormalMaterialUp);
+	}
 	if (AnimInstance && ElimMontage)
 	{
 		AnimInstance->Montage_Play(ElimMontage);//播放升天的蒙太奇动画
 	}
+	
 }
 
 void ABlasterCharacter::PlayThrowGrenadeMontage()
@@ -841,6 +861,14 @@ void ABlasterCharacter::EquipButtonPressed(const FInputActionValue& InputValue)
 	
 }
 
+void ABlasterCharacter::EnterButtonPressed(const FInputActionValue& InputValue)
+{
+	if(ChatWidget)
+	{
+		//ChatWidget->InputWord();
+	}
+}
+
 void ABlasterCharacter::ServerEquipButtonPressed_Implementation()
 {
 	//反正只在服务端调用，不用写HasAuthority 
@@ -901,6 +929,12 @@ void ABlasterCharacter::InputAimingPressed(const FInputActionValue& InputValue)
 		FollowCamera->AttachToComponent(CombatComp->EquippedWeapon->GetWeaponMesh(), FAttachmentTransformRules::KeepWorldTransform,FName(TEXT("AimSocket")));
 		FollowCamera->SetWorldLocation(CombatComp->EquippedWeapon->GetWeaponMesh()->GetSocketLocation(TEXT("AimSocket")));
 		FollowCamera->SetWorldRotation(CombatComp->EquippedWeapon->GetWeaponMesh()->GetSocketRotation(TEXT("AimSocket")));
+		
+		TPSCamera->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
+		TPSCamera->AttachToComponent(CombatComp->EquippedWeapon->GetWeaponMesh(), FAttachmentTransformRules::KeepWorldTransform,FName(TEXT("AimSocket")));
+		TPSCamera->SetWorldLocation(CombatComp->EquippedWeapon->GetWeaponMesh()->GetSocketLocation(TEXT("AimSocket")));
+		TPSCamera->SetWorldRotation(CombatComp->EquippedWeapon->GetWeaponMesh()->GetSocketRotation(TEXT("AimSocket")));
+		
 	}
 }
 
@@ -915,6 +949,10 @@ void ABlasterCharacter::InputAimingReleased(const FInputActionValue& InputValue)
 	FollowCamera->SetWorldLocation(GetMesh()->GetSocketLocation(TEXT("FollowCameraSocket")));
 	FollowCamera->SetWorldRotation(GetMesh()->GetSocketRotation(TEXT("FollowCameraSocket")));
 
+	TPSCamera->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
+	TPSCamera->AttachToComponent(GetMesh(), FAttachmentTransformRules::KeepWorldTransform,FName(TEXT("TPSCameraSocket")));
+	TPSCamera->SetWorldLocation(GetMesh()->GetSocketLocation(TEXT("TPSCameraSocket")));
+	TPSCamera->SetWorldRotation(GetMesh()->GetSocketRotation(TEXT("TPSCameraSocket")));
 }
 #pragma endregion Input
 
@@ -938,6 +976,11 @@ void ABlasterCharacter::FireReleased(const FInputActionValue& InputValue)
 	if (CombatComp)
 	{	
 		CombatComp->FireButtonPressed(false);
+	}
+	//重置后坐力
+	if(CombatComp->EquippedWeapon)
+	{
+		CombatComp->EquippedWeapon->ResetRecoil();
 	}
 }
 
@@ -1476,6 +1519,8 @@ void ABlasterCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 		//按F拾取武器
 		EnhancedInputComponent->BindAction(IA_Equip, ETriggerEvent::Triggered, this, &ABlasterCharacter::EquipButtonPressed);
 
+		//按Enter输入文字
+		EnhancedInputComponent->BindAction(IA_Enter, ETriggerEvent::Triggered, this, &ABlasterCharacter::EnterButtonPressed);
 		
 		// 你可以通过更改"ETriggerEvent"枚举值，绑定到此处的任意触发器事件.
 		//Input->BindAction(AimingInputAction, ETriggerEvent::Triggered, this, &AFPSBaseCharacter::SomeCallbackFunc);
